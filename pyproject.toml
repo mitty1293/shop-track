@@ -17,6 +17,9 @@ managed = true
 virtual = true
 dev-dependencies = []
 
+[tool.rye.scripts]
+devserver = { cmd = "python manage.py runserver", env-file = ".env" }
+
 [tool.ruff]
 line-length = 119
 indent-width = 4
