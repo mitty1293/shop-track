@@ -1,3 +1,10 @@
 # shop-track
 
-Describe your project here.
+## Running Locally
+```
+rye run devserver
+```
+## Test
+```
+rye run test
+```
