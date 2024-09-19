@@ -6,5 +6,9 @@
             "source.organizeImports": "explicit"
         },
         "editor.defaultFormatter": "charliermarsh.ruff"
+    },
+    "[svelte]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "svelte.svelte-vscode"
     }
 }
