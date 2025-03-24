@@ -3,29 +3,28 @@ import { App } from '@slack/bolt';
 const appHomeOpened = (app: App): void => {
     app.event('app_home_opened', async ({ event, client }) => {
         try {
-            // Call views.publish with the built-in client
             const result = await client.views.publish({
-                // Use the user ID associated with the event
                 user_id: event.user,
                 view: {
                     type: 'home',
                     callback_id: 'home_view',
                     blocks: [
                         {
-                            type: 'section',
+                            type: 'header',
                             text: {
-                                type: 'mrkdwn',
-                                text: '*Welcome to your _App\'s Home_* :tada:'
+                                type: "plain_text",
+                                text: "ShopTrack Dashboard 🛒",
+                                emoji: true
                             }
                         },
                         {
                             type: 'divider'
                         },
                         {
-                            type: 'section',
-                            text: {
-                                type: 'mrkdwn',
-                                text: 'This is a home tab. You can use this as a dashboard to access your app\'s features.'
+                            "type": "section",
+                            "text": {
+                                "type": "mrkdwn",
+                                "text": "Welcome! What would you like to do today?"
                             }
                         },
                         {
@@ -35,15 +34,95 @@ const appHomeOpened = (app: App): void => {
                                     type: 'button',
                                     text: {
                                         type: 'plain_text',
-                                        text: 'Click me!'
-                                    }
+                                        text: '➕ Add Record'
+                                    },
+                                    value: "click_me_123",
+                                    action_id: "actionId-add-record",
+                                    style: "primary"
+                                },
+                                {
+                                    type: 'button',
+                                    text: {
+                                        type: 'plain_text',
+                                        text: '📄 View Records'
+                                    },
+                                    value: "click_me_123",
+                                    action_id: "actionId-view-records"
+                                }
+                            ]
+                        },
+                        {
+                            type: 'divider'
+                        },
+                        {
+                            type: "section",
+                            text: {
+                                type: "plain_text",
+                                text: "To manage master data (categories, units, etc.), please select an item below:",
+                                emoji: true
+                            }
+                        },
+                        {
+                            type: 'actions',
+                            elements: [
+                                {
+                                    type: 'static_select',
+                                    placeholder: {
+                                        type: 'plain_text',
+                                        text: 'Select item to manage',
+                                    },
+                                    options: [
+                                        {
+                                            text: {
+                                                type: 'plain_text',
+                                                text: 'Manage Products'
+                                            },
+                                            value: 'manage_products'
+                                        },
+                                        {
+                                            text: {
+                                                type: 'plain_text',
+                                                text: 'Manage Categories'
+                                            },
+                                            value: 'manage_categories'
+                                        },
+                                        {
+                                            text: {
+                                                type: 'plain_text',
+                                                text: 'Manage Units'
+                                            },
+                                            value: 'manage_units'
+                                        },
+                                        {
+                                            text: {
+                                                type: 'plain_text',
+                                                text: 'Manage Manufacturers'
+                                            },
+                                            value: 'manage_manufacturers'
+                                        },
+                                        {
+                                            text: {
+                                                type: 'plain_text',
+                                                text: 'Manage Origins'
+                                            },
+                                            value: 'manage_origins'
+                                        },
+                                        {
+                                            text: {
+                                                type: 'plain_text',
+                                                text: 'Manage Stores'
+                                            },
+                                            value: 'manage_stores'
+                                        },
+                                    ],
+                                    action_id: 'actionId-manage-master-data'
                                 }
                             ]
                         }
                     ]
                 }
             });
-            console.log(result);
+            // console.log(result);
         }
         catch (error) {
             console.error(error);
