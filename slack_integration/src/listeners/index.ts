@@ -4,6 +4,7 @@ import { register as registerActionManageMasterData } from './action-manage-mast
 import { register as registerActionAddNewCategory } from './action-add-new-category';
 import { register as registerActionEditCategory } from './action-edit-category';
 import { register as registerActionDeleteCategory } from './action-delete-category';
+import { register as registerActionAddNewUnit } from './action-add-new-unit';
 
 export const registerListeners = (app: App): void => {
     registerEventAppHomeOpened(app);
@@ -11,4 +12,5 @@ export const registerListeners = (app: App): void => {
     registerActionAddNewCategory(app);
     registerActionEditCategory(app);
     registerActionDeleteCategory(app);
+    registerActionAddNewUnit(app);
 }

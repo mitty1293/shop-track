@@ -1,17 +1,17 @@
-import { apiClient } from "../utils";
-import { KnownBlock } from "@slack/types";
+import { apiClient } from '../utils';
+import { KnownBlock } from '@slack/types';
 import { View } from "@slack/types";
 
-export const viewHomeCategory = async (): Promise<View> => {
-    const response = await apiClient.get('/categories/');
-    const categories = response.data;
+export const viewHomeUnit = async (): Promise<View> => {
+    const response = await apiClient.get('/units/');
+    const units = response.data;
 
     const blocks: KnownBlock[] = [
         {
             type: 'header',
             text: {
                 type: 'plain_text',
-                text: 'Manage Categories 🗂️',
+                text: 'Manage Units 📏',
                 emoji: true
             }
         },
@@ -19,19 +19,19 @@ export const viewHomeCategory = async (): Promise<View> => {
             type: 'section',
             text: {
                 type: 'mrkdwn',
-                text: 'List of your categories:'
+                text: 'List of your units:'
             }
         },
         { type: 'divider' }
     ];
 
-    categories.forEach((category: { id: number; name: string }) => {
+    units.forEach((unit: { id: number; name: string }) => {
         blocks.push(
             {
                 type: 'section',
                 text: {
                     type: 'mrkdwn',
-                    text: `*${category.id}:* ${category.name}`
+                    text: `*${unit.id}:* ${unit.name}`
                 }
             },
             {
@@ -44,8 +44,8 @@ export const viewHomeCategory = async (): Promise<View> => {
                             text: 'Edit',
                             emoji: true
                         },
-                        value: category.id.toString(),
-                        action_id: `actionId-edit-category`
+                        value: unit.id.toString(),
+                        action_id: 'actionId-edit-unit'
                     },
                     {
                         type: 'button',
@@ -55,8 +55,8 @@ export const viewHomeCategory = async (): Promise<View> => {
                             emoji: true
                         },
                         style: 'danger',
-                        value: category.id.toString(),
-                        action_id: `actionId-delete-category`
+                        value: unit.id.toString(),
+                        action_id: 'actionId-delete-unit'
                     }
                 ]
             }
@@ -72,9 +72,9 @@ export const viewHomeCategory = async (): Promise<View> => {
                     type: 'button',
                     text: {
                         type: 'plain_text',
-                        text: '➕ Add New Category'
+                        text: '➕ Add New Unit'
                     },
-                    action_id: 'actionId-add-new-category',
+                    action_id: 'actionId-add-new-unit',
                     style: 'primary'
                 }
             ]
@@ -83,8 +83,9 @@ export const viewHomeCategory = async (): Promise<View> => {
 
     const view: View = {
         type: 'home',
-        callback_id: 'manage_categories_view',
+        callback_id: 'manage_units_view',
         blocks
     };
+
     return view;
-}
+};
