@@ -26,23 +26,41 @@ export const viewHomeCategory = async (): Promise<View> => {
     ];
 
     categories.forEach((category: { id: number; name: string }) => {
-        blocks.push({
-            type: 'section',
-            text: {
-                type: 'mrkdwn',
-                text: `*${category.id}:* ${category.name}`
-            },
-            accessory: {
-                type: 'button',
+        blocks.push(
+            {
+                type: 'section',
                 text: {
-                    type: 'plain_text',
-                    text: 'Edit',
-                    emoji: true
-                },
-                value: category.id.toString(),
-                action_id: `actionId-edit-category`
+                    type: 'mrkdwn',
+                    text: `*${category.id}:* ${category.name}`
+                }
+            },
+            {
+                type: 'actions',
+                elements: [
+                    {
+                        type: 'button',
+                        text: {
+                            type: 'plain_text',
+                            text: 'Edit',
+                            emoji: true
+                        },
+                        value: category.id.toString(),
+                        action_id: `actionId-edit-category`
+                    },
+                    {
+                        type: 'button',
+                        text: {
+                            type: 'plain_text',
+                            text: 'Delete',
+                            emoji: true
+                        },
+                        style: 'danger',
+                        value: category.id.toString(),
+                        action_id: `actionId-delete-category`
+                    }
+                ]
             }
-        });
+        );
     });
 
     blocks.push(

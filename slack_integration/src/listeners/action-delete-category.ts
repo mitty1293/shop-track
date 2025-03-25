@@ -2,8 +2,8 @@ import { App, BlockAction, ButtonAction, ViewSubmitAction } from "@slack/bolt";
 import { apiClient } from "../utils";
 import { viewHomeCategory } from "../views/view-home-category";
 
-const actionEditCategory = (app: App): void => {
-    app.action<BlockAction<ButtonAction>>('actionId-edit-category', async ({ ack, body, client, action, logger }) => {
+const actionDeleteCategory = (app: App): void => {
+    app.action<BlockAction<ButtonAction>>('actionId-delete-category', async ({ ack, body, client, action, logger }) => {
         await ack();
 
         const categoryId = parseInt(action.value ?? '0');
@@ -20,15 +20,15 @@ const actionEditCategory = (app: App): void => {
                 trigger_id: body.trigger_id,
                 view: {
                     type: 'modal',
-                    callback_id: 'submit_edit_category',
+                    callback_id: 'submit_delete_category',
                     private_metadata: category.id.toString(),
                     title: {
                         type: 'plain_text',
-                        text: 'Edit Category'
+                        text: 'Delete Category'
                     },
                     submit: {
                         type: 'plain_text',
-                        text: 'Save'
+                        text: 'Delete'
                     },
                     close: {
                         type: 'plain_text',
@@ -36,16 +36,10 @@ const actionEditCategory = (app: App): void => {
                     },
                     blocks: [
                         {
-                            type: 'input',
-                            block_id: 'blockId-category-name',
-                            element: {
-                                type: 'plain_text_input',
-                                action_id: 'actionId-category-name-input',
-                                initial_value: category.name
-                            },
-                            label: {
-                                type: 'plain_text',
-                                text: 'Category Name'
+                            type: 'section',
+                            text: {
+                                type: 'mrkdwn',
+                                text: `Are you sure you want to delete category *#${category.name}*?`
                             }
                         }
                     ]
@@ -56,14 +50,13 @@ const actionEditCategory = (app: App): void => {
         }
     });
 
-    app.view<ViewSubmitAction>('submit_edit_category', async ({ ack, body, view, client }) => {
+    app.view<ViewSubmitAction>('submit_delete_category', async ({ ack, body, view, client }) => {
         await ack();
 
         const categoryId = parseInt(view.private_metadata);
-        const newCategoryName = view.state.values['blockId-category-name']['actionId-category-name-input'].value;
 
         try {
-            await apiClient.put(`/categories/${categoryId}/`, { name: newCategoryName });
+            await apiClient.delete(`/categories/${categoryId}/`);
             const newView = await viewHomeCategory();
             await client.views.publish({
                 user_id: body.user.id,
@@ -76,5 +69,5 @@ const actionEditCategory = (app: App): void => {
 };
 
 export const register = (app: App): void => {
-    actionEditCategory(app);
-}
+    actionDeleteCategory(app);
+};
