@@ -1,6 +1,6 @@
 import { App } from '@slack/bolt';
 
-const appHomeOpened = (app: App): void => {
+const eventAppHomeOpened = (app: App): void => {
     app.event('app_home_opened', async ({ event, client }) => {
         try {
             const result = await client.views.publish({
@@ -131,5 +131,5 @@ const appHomeOpened = (app: App): void => {
 }
 
 export const register = (app: App): void => {
-    appHomeOpened(app);
+    eventAppHomeOpened(app);
 }

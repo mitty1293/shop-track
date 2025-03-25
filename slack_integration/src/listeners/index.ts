@@ -1,8 +1,12 @@
 import { App } from '@slack/bolt';
-import { register as registerAppHomeOpened } from './app_home_opened';
-import { register as registerAppHomeManageMaster } from './app_home_manage_master';
+import { register as registerEventAppHomeOpened } from './event-app-home-opened';
+import { register as registerActionManageMasterData } from './action-manage-master-data';
+import { register as registerActionAddNewCategory } from './action-add-new-category';
+import { register as registerActionEditCategory } from './action-edit-category';
 
 export const registerListeners = (app: App): void => {
-    registerAppHomeOpened(app);
-    registerAppHomeManageMaster(app);
+    registerEventAppHomeOpened(app);
+    registerActionManageMasterData(app);
+    registerActionAddNewCategory(app);
+    registerActionEditCategory(app);
 }
