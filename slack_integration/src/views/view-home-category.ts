@@ -1,90 +1,16 @@
 import { apiClient } from "../utils";
-import { KnownBlock } from "@slack/types";
 import { View } from "@slack/types";
+import { buildViewHomeMasterData } from "./view-home-master-data";
 
 export const viewHomeCategory = async (): Promise<View> => {
     const response = await apiClient.get('/categories/');
     const categories = response.data;
 
-    const blocks: KnownBlock[] = [
-        {
-            type: 'header',
-            text: {
-                type: 'plain_text',
-                text: 'Manage Categories 🗂️',
-                emoji: true
-            }
-        },
-        {
-            type: 'section',
-            text: {
-                type: 'mrkdwn',
-                text: 'List of your categories:'
-            }
-        },
-        { type: 'divider' }
-    ];
-
-    categories.forEach((category: { id: number; name: string }) => {
-        blocks.push(
-            {
-                type: 'section',
-                text: {
-                    type: 'mrkdwn',
-                    text: `*${category.id}:* ${category.name}`
-                }
-            },
-            {
-                type: 'actions',
-                elements: [
-                    {
-                        type: 'button',
-                        text: {
-                            type: 'plain_text',
-                            text: 'Edit',
-                            emoji: true
-                        },
-                        value: category.id.toString(),
-                        action_id: `actionId-edit-category`
-                    },
-                    {
-                        type: 'button',
-                        text: {
-                            type: 'plain_text',
-                            text: '🗑️ Delete',
-                            emoji: true
-                        },
-                        style: 'danger',
-                        value: category.id.toString(),
-                        action_id: `actionId-delete-category`
-                    }
-                ]
-            }
-        );
+    return buildViewHomeMasterData(categories, {
+        header: 'Manage Categories 🗂️',
+        introText: 'List of your categories:',
+        addButtonText: '➕ Add New Category',
+        actionPrefix: 'category',
+        callbackId: 'manage_categories_view'
     });
-
-    blocks.push(
-        { type: 'divider' },
-        {
-            type: 'actions',
-            elements: [
-                {
-                    type: 'button',
-                    text: {
-                        type: 'plain_text',
-                        text: '➕ Add New Category'
-                    },
-                    action_id: 'actionId-add-new-category',
-                    style: 'primary'
-                }
-            ]
-        }
-    );
-
-    const view: View = {
-        type: 'home',
-        callback_id: 'manage_categories_view',
-        blocks
-    };
-    return view;
-}
+};

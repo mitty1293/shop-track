@@ -1,16 +1,55 @@
 import { App } from '@slack/bolt';
-import { register as registerEventAppHomeOpened } from './event-app-home-opened';
 import { register as registerActionManageMasterData } from './action-manage-master-data';
-import { register as registerActionAddNewCategory } from './action-add-new-category';
-import { register as registerActionEditCategory } from './action-edit-category';
-import { register as registerActionDeleteCategory } from './action-delete-category';
-import { register as registerActionAddNewUnit } from './action-add-new-unit';
+import { actionCrudMasterData } from './action-crud-master-data';
+import { viewHomeCategory } from '../views/view-home-category';
+import { viewHomeUnit } from '../views/view-home-unit';
+import { viewHomeManufacturer } from '../views/view-home-manufacturer';
+import { viewHomeOrigin } from '../views/view-home-origin';
+import { viewHomeStore } from '../views/view-home-store';
+import { viewHomeProduct } from '../views/view-home-product';
+import { register as registerEventAppHomeOpened } from './event-app-home-opened';
 
 export const registerListeners = (app: App): void => {
+    // ホームタブ表示イベント
     registerEventAppHomeOpened(app);
+
+    // マスタデータ選択セレクトメニュー
     registerActionManageMasterData(app);
-    registerActionAddNewCategory(app);
-    registerActionEditCategory(app);
-    registerActionDeleteCategory(app);
-    registerActionAddNewUnit(app);
-}
+
+    // 各マスタに対して共通CRUDリスナーを登録
+    actionCrudMasterData(app, {
+        masterName: 'category',
+        apiPath: '/categories/',
+        viewBuilder: viewHomeCategory
+    });
+
+    actionCrudMasterData(app, {
+        masterName: 'unit',
+        apiPath: '/units/',
+        viewBuilder: viewHomeUnit
+    });
+
+    actionCrudMasterData(app, {
+        masterName: 'manufacturer',
+        apiPath: '/manufacturers/',
+        viewBuilder: viewHomeManufacturer
+    });
+
+    actionCrudMasterData(app, {
+        masterName: 'origin',
+        apiPath: '/origins/',
+        viewBuilder: viewHomeOrigin
+    });
+
+    actionCrudMasterData(app, {
+        masterName: 'store',
+        apiPath: '/stores/',
+        viewBuilder: viewHomeStore
+    });
+
+    actionCrudMasterData(app, {
+        masterName: 'product',
+        apiPath: '/products/',
+        viewBuilder: viewHomeProduct
+    });
+};
