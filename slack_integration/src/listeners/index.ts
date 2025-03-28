@@ -1,6 +1,8 @@
 import { App } from '@slack/bolt';
 import { register as registerActionManageMasterData } from './action-manage-master-data';
 import { actionCrudMasterData } from './action-crud-master-data';
+import { actionCurdStore } from './action-crud-store';
+import { actionCrudProduct } from './action-crud-product';
 import { viewHomeCategory } from '../views/view-home-category';
 import { viewHomeUnit } from '../views/view-home-unit';
 import { viewHomeManufacturer } from '../views/view-home-manufacturer';
@@ -41,15 +43,6 @@ export const registerListeners = (app: App): void => {
         viewBuilder: viewHomeOrigin
     });
 
-    actionCrudMasterData(app, {
-        masterName: 'store',
-        apiPath: '/stores/',
-        viewBuilder: viewHomeStore
-    });
-
-    actionCrudMasterData(app, {
-        masterName: 'product',
-        apiPath: '/products/',
-        viewBuilder: viewHomeProduct
-    });
+    actionCurdStore(app);
+    actionCrudProduct(app);
 };
