@@ -106,17 +106,18 @@ export const actionCrudProduct = (app: App): void => {
 
             const payload = {
                 name,
-                category: parseInt(categoryIdStr),
-                unit: parseInt(unitIdStr),
-                manufacturer: manufacturerIdStr ? parseInt(manufacturerIdStr) : null,
-                origin: originIdStr ? parseInt(originIdStr) : null
+                category_id: parseInt(categoryIdStr),
+                unit_id: parseInt(unitIdStr),
+                manufacturer_id: manufacturerIdStr ? parseInt(manufacturerIdStr) : null,
+                origin_id: originIdStr ? parseInt(originIdStr) : null
             };
 
             await apiClient.post('/products/', payload);
             const newView = await viewHomeProduct();
             await client.views.publish({ user_id: body.user.id, view: newView });
-        } catch (error) {
+        } catch (error: any) {
             logger.error('Failed to add new product:', error);
+            logger.error('Response:', error.response?.data);
         }
     });
 
