@@ -107,40 +107,22 @@ class ShoppingRecordSerializer(serializers.ModelSerializer):
     Serializer for ShoppingRecord model.
     """
 
-    store = StoreSerializer()
-    product = ProductSerializer()
+    store = StoreSerializer(read_only=True)
+    product = ProductSerializer(read_only=True)
+
+    store_id = serializers.PrimaryKeyRelatedField(queryset=Store.objects.all(), write_only=True)
+    product_id = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all(), write_only=True)
 
     class Meta:
         model = ShoppingRecord
-        fields = ["id", "price", "purchase_date", "store", "quantity", "product"]
+        fields = ["id", "price", "purchase_date", "store", "quantity", "product", "store_id", "product_id"]
 
     def create(self, validated_data):
-        store_data = validated_data.pop("store")
-        product_data = validated_data.pop("product")
+        validated_data["store"] = validated_data.pop("store_id")
+        validated_data["product"] = validated_data.pop("product_id")
+        return super().create(validated_data)
 
-        store, created = Store.objects.get_or_create(**store_data)
-        category_data = product_data.pop("category")
-        unit_data = product_data.pop("unit")
-        manufacturer_data = product_data.pop("manufacturer", None)
-        origin_data = product_data.pop("origin", None)
-
-        category, created = Category.objects.get_or_create(**category_data)
-        unit, created = Unit.objects.get_or_create(**unit_data)
-
-        if manufacturer_data:
-            manufacturer, created = Manufacturer.objects.get_or_create(**manufacturer_data)
-        else:
-            manufacturer = None
-
-        if origin_data:
-            origin, created = Origin.objects.get_or_create(**origin_data)
-        else:
-            origin = None
-
-        product, created = Product.objects.get_or_create(
-            name=product_data["name"], category=category, unit=unit, manufacturer=manufacturer, origin=origin
-        )
-
-        shopping_record = ShoppingRecord.objects.create(store=store, product=product, **validated_data)
-
-        return shopping_record
+    def update(self, instance, validated_data):
+        instance.store = validated_data.pop("store_id", instance.store)
+        instance.product = validated_data.pop("product_id", instance.product)
+        return super().update(instance, validated_data)

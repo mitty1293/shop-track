@@ -37,7 +37,7 @@ const eventAppHomeOpened = (app: App): void => {
                                         text: '➕ Add Record'
                                     },
                                     value: "click_me_123",
-                                    action_id: "actionId-add-record",
+                                    action_id: "actionId-add-new-record",
                                     style: "primary"
                                 },
                                 {

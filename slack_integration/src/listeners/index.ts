@@ -7,8 +7,8 @@ import { viewHomeCategory } from '../views/view-home-category';
 import { viewHomeUnit } from '../views/view-home-unit';
 import { viewHomeManufacturer } from '../views/view-home-manufacturer';
 import { viewHomeOrigin } from '../views/view-home-origin';
-import { viewHomeStore } from '../views/view-home-store';
-import { viewHomeProduct } from '../views/view-home-product';
+import { actionViewRecords } from './action-view-records';
+import { actionCrudRecord } from './action-crud-record';
 import { register as registerEventAppHomeOpened } from './event-app-home-opened';
 
 export const registerListeners = (app: App): void => {
@@ -45,4 +45,7 @@ export const registerListeners = (app: App): void => {
 
     actionCurdStore(app);
     actionCrudProduct(app);
+
+    actionViewRecords(app);
+    actionCrudRecord(app);
 };
