@@ -1,0 +1,20 @@
+{
+  "name": "slack_integration",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "start": "node --env-file=.env dist/app.js",
+    "tsc": "tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "dependencies": {
+    "@slack/bolt": "^4.2.1",
+    "axios": "^1.8.4",
+    "typescript": "^5.8.2"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.0"
+  }
+}
