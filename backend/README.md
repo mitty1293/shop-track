@@ -2,6 +2,7 @@
 
 ## Running Locally
 ```
+rye run python manage.py migrate
 rye run devserver
 ```
 ## Test
