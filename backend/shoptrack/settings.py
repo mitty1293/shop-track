@@ -26,7 +26,8 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = ["*"]
+allowed_hosts_env = os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
+ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(",")]
 
 
 # Application definition
@@ -142,3 +143,19 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
+
+# HTTPS settings
+# https://docs.djangoproject.com/en/5.0/topics/security/#ssl-https
+# https://docs.djangoproject.com/en/5.0/ref/settings/#secure-ssl-redirect
+# https://docs.djangoproject.com/en/5.0/ref/settings/#session-cookie-secure
+# https://docs.djangoproject.com/en/5.0/ref/settings/#csrf-cookie-secure
+# https://docs.djangoproject.com/en/5.0/ref/settings/#secure-hsts-seconds
+# https://docs.djangoproject.com/en/5.0/ref/settings/#secure-hsts-include-subdomains
+# https://docs.djangoproject.com/en/5.0/ref/settings/#secure-hsts-preload
+SECURE_SSL_REDIRECT = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+if not DEBUG:
+    SECURE_HSTS_SECONDS = 3600
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True

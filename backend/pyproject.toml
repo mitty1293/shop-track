@@ -21,6 +21,7 @@ dev-dependencies = []
 [tool.rye.scripts]
 devserver = { cmd = "python manage.py runserver", env-file = ".env" }
 test = { cmd = "python manage.py test", env-file = ".env" }
+checkdeploy = { cmd = "python manage.py check --deploy", env-file = ".env" }
 
 [tool.ruff]
 line-length = 119
