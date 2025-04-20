@@ -10,6 +10,7 @@ dependencies = [
     "djangorestframework>=3.15.2",
     "drf-spectacular>=0.27.2",
     "dj-database-url>=2.3.0",
+    "psycopg[binary]>=3.2.6",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
