@@ -1,0 +1,11 @@
+services:
+  shoptrack:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: shoptrack
+    container_name: shoptrack
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"

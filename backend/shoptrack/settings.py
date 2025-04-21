@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 
+import dj_database_url
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -26,7 +28,8 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() == "true"
 
-ALLOWED_HOSTS = ["*"]
+allowed_hosts_env = os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
+ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(",")]
 
 
 # Application definition
@@ -76,13 +79,22 @@ WSGI_APPLICATION = "shoptrack.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
+# https://pypi.org/project/dj-database-url/
 
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
+    "default": dj_database_url.config(
+        default=os.environ.get("DATABASE_URL"),
+        conn_max_age=600,
+        ssl_require=True,
+    )
 }
+
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.sqlite3",
+#         "NAME": BASE_DIR / "db.sqlite3",
+#     }
+# }
 
 
 # Password validation
@@ -142,3 +154,19 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
+
+# HTTPS settings
+# https://docs.djangoproject.com/en/5.0/topics/security/#ssl-https
+# https://docs.djangoproject.com/en/5.0/ref/settings/#secure-ssl-redirect
+# https://docs.djangoproject.com/en/5.0/ref/settings/#session-cookie-secure
+# https://docs.djangoproject.com/en/5.0/ref/settings/#csrf-cookie-secure
+# https://docs.djangoproject.com/en/5.0/ref/settings/#secure-hsts-seconds
+# https://docs.djangoproject.com/en/5.0/ref/settings/#secure-hsts-include-subdomains
+# https://docs.djangoproject.com/en/5.0/ref/settings/#secure-hsts-preload
+SECURE_SSL_REDIRECT = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+if not DEBUG:
+    SECURE_HSTS_SECONDS = 3600
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True

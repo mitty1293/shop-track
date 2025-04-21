@@ -1,0 +1,18 @@
+services:
+  shoptrack:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: shoptrack
+    container_name: shoptrack
+    networks:
+      - traefik_reverse_proxy_network
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.shoptrack.entrypoints=websecure
+      - traefik.http.routers.shoptrack.rule=Host(`shoptrack.${HOST_DOMAIN}`)
+      - traefik.http.routers.shoptrack.tls.certresolver=myresolver
+      - traefik.http.services.shoptrack.loadbalancer.server.port=8000
+networks:
+  traefik_reverse_proxy_network:
+    external: true
