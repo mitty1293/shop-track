@@ -1,2 +1,35 @@
+# Version control
+.git
+.gitignore
+
+# Docker/Compose related files (not needed inside the image)
+.dockerignore
+Dockerfile
+compose.yml
+compose.traefik.yml
+
+# Environment files (should be mounted or injected at runtime)
+.env
+.env_example
+
+# Python specific tooling/cache
+.python-version
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+
+# Project definition (usually not needed at runtime, only for build)
+pyproject.toml
+
+# IDE / Editor config
+.vscode/
+.idea/
+
+# Other unnecessary files and directories
+tests/
+docs/
+local_settings.py
+*.log
 *.sqlite3
-__pycache__

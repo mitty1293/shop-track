@@ -19,11 +19,12 @@ COPY requirements.lock ./
 # Install the dependencies
 RUN uv pip install --no-cache --system -r requirements.lock
 
+# Copy the entrypoint script into the container
+COPY entrypoint.sh ./
+RUN chmod +x ./entrypoint.sh
+
 # Copy the rest of the application code into the container
 COPY . .
 
-# Migrations
-RUN python manage.py migrate
-
-# Run the application
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "2", "shoptrack.wsgi:application"]
+# Set the entrypoint
+ENTRYPOINT ["./entrypoint.sh"]
