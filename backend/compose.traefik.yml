@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     image: shoptrack
     container_name: shoptrack
+    env_file:
+      - .env
     networks:
       - traefik_reverse_proxy_network
     labels:
