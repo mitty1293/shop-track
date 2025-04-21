@@ -157,16 +157,20 @@ SPECTACULAR_SETTINGS = {
 
 # HTTPS settings
 # https://docs.djangoproject.com/en/5.0/topics/security/#ssl-https
+# https://docs.djangoproject.com/en/5.0/ref/settings/#std-setting-SECURE_PROXY_SSL_HEADER
+# https://docs.djangoproject.com/ja/5.0/ref/settings/#use-x-forwarded-host
 # https://docs.djangoproject.com/en/5.0/ref/settings/#secure-ssl-redirect
 # https://docs.djangoproject.com/en/5.0/ref/settings/#session-cookie-secure
 # https://docs.djangoproject.com/en/5.0/ref/settings/#csrf-cookie-secure
 # https://docs.djangoproject.com/en/5.0/ref/settings/#secure-hsts-seconds
 # https://docs.djangoproject.com/en/5.0/ref/settings/#secure-hsts-include-subdomains
 # https://docs.djangoproject.com/en/5.0/ref/settings/#secure-hsts-preload
-SECURE_SSL_REDIRECT = not DEBUG
-SESSION_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_SECURE = not DEBUG
 if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    USE_X_FORWARDED_HOST = True
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
     SECURE_HSTS_SECONDS = 3600
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
