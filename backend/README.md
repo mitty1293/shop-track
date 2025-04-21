@@ -39,7 +39,7 @@ Once the `.env` file for your target environment is ready, proceed with the spec
 #### A. Local Development Environment (using Docker rye)
 ```
 rye sync
-rye --env-file .env run python manage.py migrate
+rye run migrate
 rye run devserver
 ```
 
