@@ -1,20 +1,21 @@
 const API_BASE_URL = 'https://shoptrack.fmitty.net';
 
-interface Category {
+export interface Category {
     id: number;
     name: string;
 }
 
-interface Unit {
+export interface Unit {
     id: number;
     name: string;
 }
 
-interface Manufacturer {
+export interface Manufacturer {
     id: number;
     name: string;
 }
-interface Origin {
+
+export interface Origin {
     id: number;
     name: string;
 }
@@ -35,7 +36,10 @@ export interface ProductInput {
     unit_id: number;
     manufacturer_id?: number | null;
     origin_id?: number | null;
-  }
+}
+
+// 商品更新 (PATCH) 時に API へ送るデータの型 (部分更新のため全てオプショナル)
+export type PatchedProductInput = Partial<ProductInput>;
 
 /**
  * 汎用的な GET リクエスト関数 (オプション)
@@ -53,24 +57,9 @@ const fetchList = async <T>(endpoint: string): Promise<T[]> => {
     return data as T[];
 }
 
-/**
- * 商品一覧を取得する API クライアント関数
- * @returns Product の配列を解決する Promise
- */
-export const getProducts = async (): Promise<Product[]> => {
-  const response = await fetch(`${API_BASE_URL}/api/products/`);
-
-  if (!response.ok) {
-    const errorData = await response.text();
-    console.error("API Error Response:", errorData);
-    throw new Error(`API request failed with status ${response.status}`);
-  }
-
-  const data = await response.json();
-
-  console.log(data);
-  return data as Product[];
-};
+// --- Read ---
+/** 商品一覧を取得 */
+export const getProducts = (): Promise<Product[]> => fetchList<Product>('/api/products/');
 
 /** カテゴリ一覧を取得 */
 export const getCategories = (): Promise<Category[]> => fetchList<Category>('/api/categories/');
@@ -84,6 +73,23 @@ export const getManufacturers = (): Promise<Manufacturer[]> => fetchList<Manufac
 /** 原産国一覧を取得 */
 export const getOrigins = (): Promise<Origin[]> => fetchList<Origin>('/api/origins/');
 
+/**
+ * 指定された ID の商品詳細を取得する
+ * @param id 取得する商品の ID
+ * @returns Product データ
+ */
+export const getProductById = async (id: number): Promise<Product> => {
+    const response = await fetch(`${API_BASE_URL}/api/products/${id}/`);
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error(`API Error Response (GET /api/products/${id}/):`, errorData);
+        throw new Error(`API request failed for GET /api/products/${id}/ with status ${response.status}`);
+    }
+    const data = await response.json();
+    return data as Product;
+};
+
+// --- Create ---
 /**
  * 新しい商品を作成する
  * @param productData ProductInput 型の商品データ
@@ -114,6 +120,29 @@ export const createProduct = async (productData: ProductInput): Promise<Product>
     return createdProduct as Product;
 };
 
+// --- Update ---
+/**
+ * 指定された ID の商品を更新 (部分更新) する
+ */
+export const updateProduct = async (id: number, productData: PatchedProductInput): Promise<Product> => {
+    const response = await fetch(`${API_BASE_URL}/api/products/${id}/`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(productData),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error(`API Error Response (PATCH /api/products/${id}/):`, errorData);
+        throw new Error(`API request failed for PATCH /api/products/${id}/ with status ${response.status}`);
+    }
+    const updatedProduct = await response.json();
+    return updatedProduct as Product;
+};
+  
+// --- Delete ---
 /**
  * 指定された ID の商品を削除する
  * @param id 削除する商品の ID
@@ -127,16 +156,9 @@ export const deleteProduct = async (id: number): Promise<void> => {
     // 多くの DELETE リクエストは成功時に 204 No Content を返す
     // response.ok は 200-299 の範囲のステータスコードで true になる
     if (!response.ok) {
-        let errorDetails = await response.text();
-        try {
-            const errorJson = JSON.parse(errorDetails);
-            errorDetails = JSON.stringify(errorJson, null, 2);
-        } catch (e) {
-            // ignore if not json
-        }
-        console.error(`API Error Response (DELETE /api/products/${id}/):`, errorDetails);
+        const errorData = await response.text();
+        console.error(`API Error Response (DELETE /api/products/${id}/):`, errorData);
         throw new Error(`API request failed for DELETE /api/products/${id}/ with status ${response.status}`);
     }
-  
     // 成功時は何も返さない (void)
 };

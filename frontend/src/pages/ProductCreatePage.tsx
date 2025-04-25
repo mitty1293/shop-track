@@ -10,7 +10,7 @@ import {
   ProductInput,
 } from '../api/client';
 
-const ProductCreate: React.FC = () => {
+const ProductCreatePage: React.FC = () => {
     // --- 状態管理 ---
     const [name, setName] = useState('');
     const [categoryId, setCategoryId] = useState<number | ''>(''); // 初期値は空 or プレースホルダ値
@@ -208,4 +208,4 @@ const ProductCreate: React.FC = () => {
     );
 };
 
-export default ProductCreate;
+export default ProductCreatePage;

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getProducts, deleteProduct } from '../api/client';
 import { Link } from 'react-router';
 
-const ItemsList: React.FC = () => {
+const ItemsListPage: React.FC = () => {
     const queryClient = useQueryClient();
 
     // --- 商品一覧の取得 (useQuery) ---
@@ -74,6 +74,10 @@ const ItemsList: React.FC = () => {
                                 <td>{product.manufacturer ? product.manufacturer.name : 'N/A'}</td>
                                 <td>{product.origin ? product.origin.name : 'N/A'}</td>
                                 <td>
+                                    <Link to={`/items/${product.id}/edit`}>
+                                        <button>編集</button>
+                                    </Link>
+                                    {' '}
                                     <button
                                         onClick={() => handleDelete(product.id, product.name)}
                                         // 特定の ID の商品が削除中の場合にボタンを無効化
@@ -92,4 +96,4 @@ const ItemsList: React.FC = () => {
     );
 };
 
-export default ItemsList;
+export default ItemsListPage;
