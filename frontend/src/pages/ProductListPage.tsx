@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getProducts, deleteProduct } from '../api/client';
 import { Link } from 'react-router';
 
-const ItemsListPage: React.FC = () => {
+const ProductListPage: React.FC = () => {
     const queryClient = useQueryClient();
 
     // --- 商品一覧の取得 (useQuery) ---
@@ -15,7 +15,7 @@ const ItemsListPage: React.FC = () => {
     // --- 削除処理 (useMutation) ---
     const { mutate, isPending: isDeleting, variables: deletingId } = useMutation({
         mutationFn: deleteProduct,
-        onSuccess: (data, id) => {
+        onSuccess: (_, id) => {
             console.log(`商品 (ID: ${id}) の削除成功`);
             // 商品一覧のキャッシュを無効化して再取得をトリガー
             queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -47,7 +47,7 @@ const ItemsListPage: React.FC = () => {
         <div>
             <h1>Products</h1>
             <p>
-                <Link to="/items/new">新しい商品を追加</Link>
+                <Link to="/products/new">新しい商品を追加</Link>
             </p>
             {(!products || products.length === 0) ? (
                 <p>The product has not yet been registered.</p>
@@ -74,7 +74,7 @@ const ItemsListPage: React.FC = () => {
                                 <td>{product.manufacturer ? product.manufacturer.name : 'N/A'}</td>
                                 <td>{product.origin ? product.origin.name : 'N/A'}</td>
                                 <td>
-                                    <Link to={`/items/${product.id}/edit`}>
+                                    <Link to={`/products/${product.id}/edit`}>
                                         <button>編集</button>
                                     </Link>
                                     {' '}
@@ -96,4 +96,4 @@ const ItemsListPage: React.FC = () => {
     );
 };
 
-export default ItemsListPage;
+export default ProductListPage;

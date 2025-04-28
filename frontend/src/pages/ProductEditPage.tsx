@@ -83,7 +83,7 @@ const ProductEditPage: React.FC = () => {
                 queryClient.invalidateQueries({ queryKey: ['products', productId] }); // この商品の詳細キャッシュ
                 queryClient.invalidateQueries({ queryKey: ['products'] });          // 商品一覧のキャッシュ
                 // 一覧ページに遷移
-                navigate('/items'); // パスは App.tsx の設定に合わせる
+                navigate('/products'); // パスは App.tsx の設定に合わせる
             },
             // Mutation 失敗時のコールバック
             onError: (error) => {
@@ -138,7 +138,7 @@ const ProductEditPage: React.FC = () => {
     return (
         <div>
             <h1>商品を編集 (ID: {productId})</h1>
-            <button onClick={() => navigate('/items')}>商品一覧に戻る</button>
+            <button onClick={() => navigate('/products')}>商品一覧に戻る</button>
             <form onSubmit={handleSubmit}>
                 <div>
                     <label htmlFor="name">商品名:</label>
@@ -222,7 +222,7 @@ const ProductEditPage: React.FC = () => {
                 <button type="submit" disabled={isPending || isLoadingProduct || isLoadingDropdownData}>
                     {isPending ? '更新中...' : '更新する'}
                 </button>
-                <button type="button" onClick={() => navigate('/items')} disabled={isPending}>
+                <button type="button" onClick={() => navigate('/products')} disabled={isPending}>
                     キャンセル
                 </button>
             </form>

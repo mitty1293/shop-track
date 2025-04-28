@@ -1,25 +1,167 @@
 const API_BASE_URL = 'https://shoptrack.fmitty.net';
 
-export interface Category {
-    id: number;
-    name: string;
+/**
+ * 汎用的な GET リクエスト関数 (オプション)
+ * @param endpoint APIエンドポイントのパス (例: '/api/categories/')
+ * @returns レスポンスの JSON データ
+ */
+const fetchList = async <T>(endpoint: string): Promise<T[]> => {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`);
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error(`API Error Response (${endpoint}):`, errorData);
+        throw new Error(`API request failed for ${endpoint} with status ${response.status}`);
+    }
+    const data = await response.json();
+    return data as T[];
 }
 
-export interface Unit {
-    id: number;
-    name: string;
-}
+// === Category ===
+export interface Category { id: number; name: string; }
 
-export interface Manufacturer {
-    id: number;
-    name: string;
-}
+// カテゴリ作成/更新(PUT)時に API へ送るデータの型
+export interface CategoryInput { name: string; }
 
-export interface Origin {
-    id: number;
-    name: string;
-}
+// カテゴリ部分更新(PATCH)時に API へ送るデータの型
+export type PatchedCategoryInput = Partial<CategoryInput>;
 
+// === API クライアント関数 (Category 関連) ===
+export const getCategories = (): Promise<Category[]> => fetchList<Category>('/api/categories/');
+export const getCategoryById = async (id: number): Promise<Category> => {
+    const response = await fetch(`${API_BASE_URL}/api/categories/${id}/`);
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error(`API Error Response (GET /api/categories/${id}/):`, errorData);
+        throw new Error(`API request failed for GET /api/categories/${id}/ with status ${response.status}`);
+    }
+    const data = await response.json();
+    return data as Category;
+};
+export const createCategory = async (categoryData: CategoryInput): Promise<Category> => {
+    const response = await fetch(`${API_BASE_URL}/api/categories/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(categoryData),
+    });
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error("API Error Response (POST /api/categories/):", errorData);
+        throw new Error(`API request failed for POST /api/categories/ with status ${response.status}`);
+    }
+    return await response.json() as Category;
+};
+export const updateCategory = async (id: number, categoryData: PatchedCategoryInput): Promise<Category> => {
+    const response = await fetch(`${API_BASE_URL}/api/categories/${id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(categoryData),
+    });
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error(`API Error Response (PATCH /api/categories/${id}/):`, errorData);
+        throw new Error(`API request failed for PATCH /api/categories/${id}/ with status ${response.status}`);
+    }
+    return await response.json() as Category;
+};
+export const deleteCategory = async (id: number): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/categories/${id}/`, {
+        method: 'DELETE',
+    });
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error(`API Error Response (DELETE /api/categories/${id}/):`, errorData);
+        throw new Error(`API request failed for DELETE /api/categories/${id}/ with status ${response.status}`);
+    }
+};
+
+// === Unit ===
+export interface Unit { id: number; name: string; }
+export interface UnitInput { name: string; }
+export type PatchedUnitInput = Partial<UnitInput>;
+export const getUnits = (): Promise<Unit[]> => fetchList<Unit>('/api/units/');
+export const getUnitById = async (id: number): Promise<Unit> => {
+    const response = await fetch(`${API_BASE_URL}/api/units/${id}/`); // Endpoint check
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    return await response.json() as Unit;
+};
+export const createUnit = async (data: UnitInput): Promise<Unit> => {
+    const response = await fetch(`${API_BASE_URL}/api/units/`, { // Endpoint check
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    return await response.json() as Unit;
+};
+export const updateUnit = async (id: number, data: PatchedUnitInput): Promise<Unit> => {
+    const response = await fetch(`${API_BASE_URL}/api/units/${id}/`, { // Endpoint check
+        method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    return await response.json() as Unit;
+};
+export const deleteUnit = async (id: number): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/units/${id}/`, { method: 'DELETE' }); // Endpoint check
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+};
+
+// === Manufacturer ===
+export interface Manufacturer { id: number; name: string; }
+export interface ManufacturerInput { name: string; }
+export type PatchedManufacturerInput = Partial<ManufacturerInput>;
+export const getManufacturers = (): Promise<Manufacturer[]> => fetchList<Manufacturer>('/api/manufacturers/');
+export const getManufacturerById = async (id: number): Promise<Manufacturer> => {
+    const response = await fetch(`${API_BASE_URL}/api/manufacturers/${id}/`); // Endpoint check
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    return await response.json() as Manufacturer;
+};
+export const createManufacturer = async (data: ManufacturerInput): Promise<Manufacturer> => {
+    const response = await fetch(`${API_BASE_URL}/api/manufacturers/`, { // Endpoint check
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    return await response.json() as Manufacturer;
+};
+export const updateManufacturer = async (id: number, data: PatchedManufacturerInput): Promise<Manufacturer> => {
+    const response = await fetch(`${API_BASE_URL}/api/manufacturers/${id}/`, { // Endpoint check
+        method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    return await response.json() as Manufacturer;
+};
+export const deleteManufacturer = async (id: number): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/manufacturers/${id}/`, { method: 'DELETE' }); // Endpoint check
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+};
+
+// === Origin ===
+export interface Origin { id: number; name: string; }
+export interface OriginInput { name: string; }
+export type PatchedOriginInput = Partial<OriginInput>;
+export const getOrigins = (): Promise<Origin[]> => fetchList<Origin>('/api/origins/');
+export const getOriginById = async (id: number): Promise<Origin> => {
+    const response = await fetch(`${API_BASE_URL}/api/origins/${id}/`); // Endpoint check
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    return await response.json() as Origin;
+};
+export const createOrigin = async (data: OriginInput): Promise<Origin> => {
+    const response = await fetch(`${API_BASE_URL}/api/origins/`, { // Endpoint check
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    return await response.json() as Origin;
+};
+export const updateOrigin = async (id: number, data: PatchedOriginInput): Promise<Origin> => {
+    const response = await fetch(`${API_BASE_URL}/api/origins/${id}/`, { // Endpoint check
+        method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    return await response.json() as Origin;
+};
+export const deleteOrigin = async (id: number): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/origins/${id}/`, { method: 'DELETE' }); // Endpoint check
+    if (!response.ok) throw new Error(`API error: ${response.status}`);
+};
+
+// === Product ===
 export interface Product {
     id: number;
     name: string;
@@ -41,37 +183,9 @@ export interface ProductInput {
 // 商品更新 (PATCH) 時に API へ送るデータの型 (部分更新のため全てオプショナル)
 export type PatchedProductInput = Partial<ProductInput>;
 
-/**
- * 汎用的な GET リクエスト関数 (オプション)
- * @param endpoint APIエンドポイントのパス (例: '/api/categories/')
- * @returns レスポンスの JSON データ
- */
-const fetchList = async <T>(endpoint: string): Promise<T[]> => {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`);
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error(`API Error Response (${endpoint}):`, errorData);
-        throw new Error(`API request failed for ${endpoint} with status ${response.status}`);
-    }
-    const data = await response.json();
-    return data as T[];
-}
-
 // --- Read ---
 /** 商品一覧を取得 */
 export const getProducts = (): Promise<Product[]> => fetchList<Product>('/api/products/');
-
-/** カテゴリ一覧を取得 */
-export const getCategories = (): Promise<Category[]> => fetchList<Category>('/api/categories/');
-
-/** 単位一覧を取得 */
-export const getUnits = (): Promise<Unit[]> => fetchList<Unit>('/api/units/');
-
-/** 製造者一覧を取得 */
-export const getManufacturers = (): Promise<Manufacturer[]> => fetchList<Manufacturer>('/api/manufacturers/');
-
-/** 原産国一覧を取得 */
-export const getOrigins = (): Promise<Origin[]> => fetchList<Origin>('/api/origins/');
 
 /**
  * 指定された ID の商品詳細を取得する

@@ -1,8 +1,25 @@
 import { Routes, Route, Link } from 'react-router';
 import HomePage from './pages/HomePage';
-import ItemsListPage from './pages/ItemsListPage';
+// Product Pages
+import ProductListPage from './pages/ProductListPage';
 import ProductCreatePage from './pages/ProductCreatePage';
 import ProductEditPage from './pages/ProductEditPage';
+// Category Pages
+import CategoryListPage from './pages/CategoryListPage';
+import CategoryCreatePage from './pages/CategoryCreatePage';
+import CategoryEditPage from './pages/CategoryEditPage';
+// Unit Pages
+import UnitListPage from './pages/UnitListPage';
+import UnitCreatePage from './pages/UnitCreatePage';
+import UnitEditPage from './pages/UnitEditPage';
+// Manufacturer Pages
+import ManufacturerListPage from './pages/ManufacturerListPage';
+import ManufacturerCreatePage from './pages/ManufacturerCreatePage';
+import ManufacturerEditPage from './pages/ManufacturerEditPage';
+// Origin Pages
+import OriginListPage from './pages/OriginListPage';
+import OriginCreatePage from './pages/OriginCreatePage';
+import OriginEditPage from './pages/OriginEditPage';
 import './App.css'
 
 function App() {
@@ -11,19 +28,36 @@ function App() {
       <nav>
         <ul>
           <li><Link to="/">Home</Link></li>
-          <li><Link to="/items">Items List</Link></li>
-          <li><Link to="/items/new">Add Item</Link></li>
+          <li><Link to="/products">Products List</Link></li>
+          <li><Link to="/categories">Categories List</Link></li>
+          <li><Link to="/units">Units List</Link></li>
+          <li><Link to="/manufacturers">Manufacturers List</Link></li>
+          <li><Link to="/origins">Origins List</Link></li>
         </ul>
       </nav>
       <Routes>
+        {/* Home */}
         <Route path="/" element={<HomePage />} />
-        <Route path="/items" element={<ItemsListPage />} />
-        <Route path="/items/new" element={<ProductCreatePage />} />
-        <Route path="/items/:id/edit" element={<ProductEditPage />} />
-        {/* 他のルート（データ作成、詳細、編集など）を後で追加 */}
-        {/* 例: <Route path="/items/new" element={<ItemCreatePage />} /> */}
-        {/* 例: <Route path="/items/:itemId" element={<ItemDetailPage />} /> */}
-        {/* 例: <Route path="/items/:itemId/edit" element={<ItemEditPage />} /> */}
+        {/* Product Routes */}
+        <Route path="/products" element={<ProductListPage />} />
+        <Route path="/products/new" element={<ProductCreatePage />} />
+        <Route path="/products/:id/edit" element={<ProductEditPage />} />
+        {/* Category Routes */}
+        <Route path="/categories" element={<CategoryListPage />} />
+        <Route path="/categories/new" element={<CategoryCreatePage />} />
+        <Route path="/categories/:id/edit" element={<CategoryEditPage />} />
+        {/* Unit Routes */}
+        <Route path="/units" element={<UnitListPage />} />
+        <Route path="/units/new" element={<UnitCreatePage />} />
+        <Route path="/units/:id/edit" element={<UnitEditPage />} />
+        {/* Manufacturer Routes */}
+        <Route path="/manufacturers" element={<ManufacturerListPage />} />
+        <Route path="/manufacturers/new" element={<ManufacturerCreatePage />} />
+        <Route path="/manufacturers/:id/edit" element={<ManufacturerEditPage />} />
+        {/* Origin Routes */}
+        <Route path="/origins" element={<OriginListPage />} />
+        <Route path="/origins/new" element={<OriginCreatePage />} />
+        <Route path="/origins/:id/edit" element={<OriginEditPage />} />
       </Routes>
     </>
   )
