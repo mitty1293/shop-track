@@ -20,6 +20,10 @@ import ManufacturerEditPage from './pages/ManufacturerEditPage';
 import OriginListPage from './pages/OriginListPage';
 import OriginCreatePage from './pages/OriginCreatePage';
 import OriginEditPage from './pages/OriginEditPage';
+// Store Pages
+import StoreListPage from './pages/StoreListPage';
+import StoreCreatePage from './pages/StoreCreatePage';
+import StoreEditPage from './pages/StoreEditPage';
 import './App.css'
 
 function App() {
@@ -33,6 +37,7 @@ function App() {
           <li><Link to="/units">Units List</Link></li>
           <li><Link to="/manufacturers">Manufacturers List</Link></li>
           <li><Link to="/origins">Origins List</Link></li>
+          <li><Link to="/stores">Stores List</Link></li>
         </ul>
       </nav>
       <Routes>
@@ -58,6 +63,10 @@ function App() {
         <Route path="/origins" element={<OriginListPage />} />
         <Route path="/origins/new" element={<OriginCreatePage />} />
         <Route path="/origins/:id/edit" element={<OriginEditPage />} />
+        {/* Store Routes */}
+        <Route path="/stores" element={<StoreListPage />} />
+        <Route path="/stores/new" element={<StoreCreatePage />} />
+        <Route path="/stores/:id/edit" element={<StoreEditPage />} />
       </Routes>
     </>
   )

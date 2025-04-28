@@ -18,10 +18,8 @@ const fetchList = async <T>(endpoint: string): Promise<T[]> => {
 
 // === Category ===
 export interface Category { id: number; name: string; }
-
 // カテゴリ作成/更新(PUT)時に API へ送るデータの型
 export interface CategoryInput { name: string; }
-
 // カテゴリ部分更新(PATCH)時に API へ送るデータの型
 export type PatchedCategoryInput = Partial<CategoryInput>;
 
@@ -34,8 +32,7 @@ export const getCategoryById = async (id: number): Promise<Category> => {
         console.error(`API Error Response (GET /api/categories/${id}/):`, errorData);
         throw new Error(`API request failed for GET /api/categories/${id}/ with status ${response.status}`);
     }
-    const data = await response.json();
-    return data as Category;
+    return await response.json() as Category;
 };
 export const createCategory = async (categoryData: CategoryInput): Promise<Category> => {
     const response = await fetch(`${API_BASE_URL}/api/categories/`, {
@@ -159,6 +156,61 @@ export const updateOrigin = async (id: number, data: PatchedOriginInput): Promis
 export const deleteOrigin = async (id: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/origins/${id}/`, { method: 'DELETE' }); // Endpoint check
     if (!response.ok) throw new Error(`API error: ${response.status}`);
+};
+
+// === Store ===
+export interface Store { id: number; name: string; location: string; }
+// ストア作成/更新(PUT)時に API へ送るデータの型 (name と location が必須)
+export interface StoreInput { name: string; location: string; }
+// ストア部分更新(PATCH)時に API へ送るデータの型
+export type PatchedStoreInput = Partial<StoreInput>;
+
+// --- API クライアント関数 (Store 関連) ---
+export const getStores = (): Promise<Store[]> => fetchList<Store>('/api/stores/');
+export const getStoreById = async (id: number): Promise<Store> => {
+    const response = await fetch(`${API_BASE_URL}/api/stores/${id}/`);
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error(`API Error Response (GET /api/stores/${id}/):`, errorData);
+        throw new Error(`API request failed for GET /api/stores/${id}/ with status ${response.status}`);
+    }
+    return await response.json() as Store;
+};
+export const createStore = async (storeData: StoreInput): Promise<Store> => {
+    const response = await fetch(`${API_BASE_URL}/api/stores/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(storeData),
+    });
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error("API Error Response (POST /api/stores/):", errorData);
+        throw new Error(`API request failed for POST /api/stores/ with status ${response.status}`);
+    }
+    return await response.json() as Store;
+};
+export const updateStore = async (id: number, storeData: PatchedStoreInput): Promise<Store> => {
+    const response = await fetch(`${API_BASE_URL}/api/stores/${id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(storeData),
+    });
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error(`API Error Response (PATCH /api/stores/${id}/):`, errorData);
+        throw new Error(`API request failed for PATCH /api/stores/${id}/ with status ${response.status}`);
+    }
+    return await response.json() as Store;
+};
+export const deleteStore = async (id: number): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/stores/${id}/`, {
+        method: 'DELETE',
+    });
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error(`API Error Response (DELETE /api/stores/${id}/):`, errorData);
+        throw new Error(`API request failed for DELETE /api/stores/${id}/ with status ${response.status}`);
+    }
 };
 
 // === Product ===

@@ -59,7 +59,7 @@ const UnitListPage: React.FC = () => {
                                     onClick={() => handleDelete(unit.id, unit.name)}
                                     disabled={isDeleting && deletingId === unit.id}
                                 >
-                                {isDeleting && deletingId === unit.id ? 'Deleting...' : 'Delete'}
+                                    {isDeleting && deletingId === unit.id ? 'Deleting...' : 'Delete'}
                                 </button>
                             </td>
                         </tr>
