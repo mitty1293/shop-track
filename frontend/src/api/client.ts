@@ -1,7 +1,7 @@
 const API_BASE_URL = 'https://shoptrack.fmitty.net';
 
 /**
- * 汎用的な GET リクエスト関数 (オプション)
+ * 汎用的な GET リクエスト関数
  * @param endpoint APIエンドポイントのパス (例: '/api/categories/')
  * @returns レスポンスの JSON データ
  */
@@ -327,4 +327,86 @@ export const deleteProduct = async (id: number): Promise<void> => {
         throw new Error(`API request failed for DELETE /api/products/${id}/ with status ${response.status}`);
     }
     // 成功時は何も返さない (void)
+};
+
+// === ShoppingRecord ===
+export interface ShoppingRecord {
+    id: number;
+    price: number;
+    purchase_date: string;
+    quantity: string;
+    store: Store;
+    product: Product;
+}
+  
+// 購買記録 作成/更新(PUT)時に API へ送るデータの型
+export interface ShoppingRecordInput {
+    price: number;
+    purchase_date: string; // Expects a string in YYYYY-MM-DD format
+    quantity: string;
+    store_id: number;
+    product_id: number;
+}
+
+// 購買記録 部分更新(PATCH)時に API へ送るデータの型
+export type PatchedShoppingRecordInput = Partial<ShoppingRecordInput>;
+
+
+// --- API クライアント関数 (ShoppingRecord 関連) ---
+/** 購買記録一覧を取得 */
+export const getShoppingRecords = (): Promise<ShoppingRecord[]> => fetchList<ShoppingRecord>('/api/shopping-records/');
+
+/** 指定された ID の購買記録詳細を取得する */
+export const getShoppingRecordById = async (id: number): Promise<ShoppingRecord> => {
+    const response = await fetch(`${API_BASE_URL}/api/shopping-records/${id}/`);
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error(`API Error Response (GET /api/shopping-records/${id}/):`, errorData);
+        throw new Error(`API request failed for GET /api/shopping-records/${id}/ with status ${response.status}`);
+    }
+    return await response.json() as ShoppingRecord;
+};
+
+/** 新しい購買記録を作成する */
+export const createShoppingRecord = async (recordData: ShoppingRecordInput): Promise<ShoppingRecord> => {
+    const response = await fetch(`${API_BASE_URL}/api/shopping-records/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(recordData),
+    });
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error("API Error Response (POST /api/shopping-records/):", errorData);
+        // TODO: より詳細なエラーハンドリング (サーバーからのバリデーションエラー等)
+        throw new Error(`API request failed for POST /api/shopping-records/ with status ${response.status}`);
+    }
+    return await response.json() as ShoppingRecord;
+};
+
+/** 指定された ID の購買記録を更新 (部分更新) する */
+export const updateShoppingRecord = async (id: number, recordData: PatchedShoppingRecordInput): Promise<ShoppingRecord> => {
+    const response = await fetch(`${API_BASE_URL}/api/shopping-records/${id}/`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(recordData),
+    });
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error(`API Error Response (PATCH /api/shopping-records/${id}/):`, errorData);
+        // TODO: より詳細なエラーハンドリング
+        throw new Error(`API request failed for PATCH /api/shopping-records/${id}/ with status ${response.status}`);
+    }
+    return await response.json() as ShoppingRecord;
+};
+
+/** 指定された ID の購買記録を削除する */
+export const deleteShoppingRecord = async (id: number): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/shopping-records/${id}/`, {
+        method: 'DELETE',
+    });
+    if (!response.ok) {
+        const errorData = await response.text();
+        console.error(`API Error Response (DELETE /api/shopping-records/${id}/):`, errorData);
+        throw new Error(`API request failed for DELETE /api/shopping-records/${id}/ with status ${response.status}`);
+    }
 };

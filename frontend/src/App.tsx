@@ -24,6 +24,10 @@ import OriginEditPage from './pages/OriginEditPage';
 import StoreListPage from './pages/StoreListPage';
 import StoreCreatePage from './pages/StoreCreatePage';
 import StoreEditPage from './pages/StoreEditPage';
+// Shopping Record Pages
+import ShoppingRecordListPage from './pages/ShoppingRecordListPage';
+import ShoppingRecordCreatePage from './pages/ShoppingRecordCreatePage';
+import ShoppingRecordEditPage from './pages/ShoppingRecordEditPage';
 import './App.css'
 
 function App() {
@@ -38,6 +42,7 @@ function App() {
           <li><Link to="/manufacturers">Manufacturers List</Link></li>
           <li><Link to="/origins">Origins List</Link></li>
           <li><Link to="/stores">Stores List</Link></li>
+          <li><Link to="/shopping-records">ShoppingRecords List</Link></li>
         </ul>
       </nav>
       <Routes>
@@ -67,6 +72,10 @@ function App() {
         <Route path="/stores" element={<StoreListPage />} />
         <Route path="/stores/new" element={<StoreCreatePage />} />
         <Route path="/stores/:id/edit" element={<StoreEditPage />} />
+        {/* ShoppingRecord Routes */}
+        <Route path="/shopping-records" element={<ShoppingRecordListPage />} />
+        <Route path="/shopping-records/new" element={<ShoppingRecordCreatePage />} />
+        <Route path="/shopping-records/:id/edit" element={<ShoppingRecordEditPage />} />
       </Routes>
     </>
   )

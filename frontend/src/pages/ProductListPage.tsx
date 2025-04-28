@@ -47,7 +47,7 @@ const ProductListPage: React.FC = () => {
         <div>
             <h1>Products</h1>
             <p>
-                <Link to="/products/new">新しい商品を追加</Link>
+                <Link to="/products/new">Add New Product</Link>
             </p>
             {(!products || products.length === 0) ? (
                 <p>The product has not yet been registered.</p>
@@ -75,7 +75,7 @@ const ProductListPage: React.FC = () => {
                                 <td>{product.origin ? product.origin.name : 'N/A'}</td>
                                 <td>
                                     <Link to={`/products/${product.id}/edit`}>
-                                        <button>編集</button>
+                                        <button>Edit</button>
                                     </Link>
                                     {' '}
                                     <button

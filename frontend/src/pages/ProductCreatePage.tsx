@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import {
-  getCategories,
-  getUnits,
-  getManufacturers,
-  getOrigins,
-  createProduct,
-  ProductInput,
+    getCategories,
+    getUnits,
+    getManufacturers,
+    getOrigins,
+    createProduct,
+    ProductInput,
 } from '../api/client';
 
 const ProductCreatePage: React.FC = () => {
@@ -56,7 +56,7 @@ const ProductCreatePage: React.FC = () => {
             // 商品一覧のキャッシュを無効化して再取得をトリガー
             queryClient.invalidateQueries({ queryKey: ['products'] });
             // 商品一覧ページに遷移
-            navigate('/products'); // App.tsx で設定した一覧ページのパスに合わせる
+            navigate('/products');
         },
         onError: (error) => {
             console.error('商品作成エラー:', error);
@@ -81,7 +81,6 @@ const ProductCreatePage: React.FC = () => {
             name,
             category_id: Number(categoryId), // number 型に変換
             unit_id: Number(unitId),         // number 型に変換
-            // 選択されていれば number、されていなければ null を送信
             manufacturer_id: manufacturerId ? Number(manufacturerId) : null,
             origin_id: originId ? Number(originId) : null,
         };
@@ -105,11 +104,11 @@ const ProductCreatePage: React.FC = () => {
     // --- JSX (フォームのレンダリング) ---
     return (
         <div>
-            <h1>新しい商品を登録</h1>
+            <h1>Add New Product</h1>
             <form onSubmit={handleSubmit}>
                 {/* 商品名 */}
                 <div>
-                    <label htmlFor="name">商品名:</label>
+                    <label htmlFor="name">Name:</label>
                     <input
                         type="text"
                         id="name"
@@ -122,7 +121,7 @@ const ProductCreatePage: React.FC = () => {
 
                 {/* カテゴリ選択 */}
                 <div>
-                    <label htmlFor="category">カテゴリ:</label>
+                    <label htmlFor="category">Category:</label>
                     <select
                         id="category"
                         value={categoryId}
@@ -141,7 +140,7 @@ const ProductCreatePage: React.FC = () => {
 
                 {/* 単位選択 */}
                 <div>
-                    <label htmlFor="unit">単位:</label>
+                    <label htmlFor="unit">Unit:</label>
                     <select
                         id="unit"
                         value={unitId}
@@ -160,7 +159,7 @@ const ProductCreatePage: React.FC = () => {
 
                 {/* 製造者選択 (任意) */}
                 <div>
-                    <label htmlFor="manufacturer">製造者:</label>
+                    <label htmlFor="manufacturer">Manufacturer:</label>
                     <select
                         id="manufacturer"
                         value={manufacturerId}
@@ -178,7 +177,7 @@ const ProductCreatePage: React.FC = () => {
 
                 {/* 原産国選択 (任意) */}
                 <div>
-                    <label htmlFor="origin">原産国:</label>
+                    <label htmlFor="origin">Origin:</label>
                     <select
                         id="origin"
                         value={originId}
