@@ -3,6 +3,24 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getProducts, deleteProduct } from '../api/client';
 import { Link } from 'react-router';
 
+// --- Material UI ---
+import Container from '@mui/material/Container';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import Table from '@mui/material/Table';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TableContainer from '@mui/material/TableContainer';
+import TableHead from '@mui/material/TableHead';
+import TableRow from '@mui/material/TableRow';
+import Paper from '@mui/material/Paper';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+
 const ProductListPage: React.FC = () => {
     const queryClient = useQueryClient();
 
@@ -37,62 +55,77 @@ const ProductListPage: React.FC = () => {
     };
 
     if (isLoading) {
-        return <div>Loading...</div>;
+        return (
+            <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                <CircularProgress />
+            </Container>
+        );
     }
     if (isError) {
-        return <div>Error: {error instanceof Error ? error.message : 'Unknown error'}</div>;
+        return (
+            <Container maxWidth="md" sx={{ mt: 2 }}>
+                <Alert severity="error">
+                    Error fetching products: {error instanceof Error ? error.message : 'Unknown error'}
+                </Alert>
+            </Container>
+        );
     }
 
     return (
-        <div>
-            <h1>Products</h1>
-            <p>
-                <Link to="/products/new">Add New Product</Link>
-            </p>
+        <Container maxWidth="lg" sx={{ mt: 2 }}>
+            <Typography variant="h4" component="h1" gutterBottom>
+                Products
+            </Typography>
+            <Box sx={{ mb: 2 }}>
+                <Button
+                    variant="contained"
+                    component={Link}
+                    to="/products/new"
+                >
+                    Add New Product
+                </Button>
+            </Box>
+        
             {(!products || products.length === 0) ? (
-                <p>The product has not yet been registered.</p>
+                <Typography>No products found.</Typography>
             ) : (
-                <table>
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Name</th>
-                            <th>Category</th>
-                            <th>Unit</th>
-                            <th>Manufacturer</th>
-                            <th>Origin</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {products.map((product) => (
-                            <tr key={product.id}>
-                                <td>{product.id}</td>
-                                <td>{product.name}</td>
-                                <td>{product.category.name}</td>
-                                <td>{product.unit.name}</td>
-                                <td>{product.manufacturer ? product.manufacturer.name : 'N/A'}</td>
-                                <td>{product.origin ? product.origin.name : 'N/A'}</td>
-                                <td>
-                                    <Link to={`/products/${product.id}/edit`}>
-                                        <button>Edit</button>
-                                    </Link>
-                                    {' '}
-                                    <button
-                                        onClick={() => handleDelete(product.id, product.name)}
-                                        // 特定の ID の商品が削除中の場合にボタンを無効化
-                                        disabled={isDeleting && deletingId === product.id}
-                                    >
-                                        {/* 削除中なら表示を変更 */}
-                                        {isDeleting && deletingId === product.id ? '削除中...' : '削除'}
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
+                <TableContainer component={Paper}>
+                    <Table sx={{ minWidth: 750 }} aria-label="product table">
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>ID</TableCell>
+                                <TableCell>Name</TableCell>
+                                <TableCell>Category</TableCell>
+                                <TableCell>Unit</TableCell>
+                                <TableCell>Manufacturer</TableCell>
+                                <TableCell>Origin</TableCell>
+                                <TableCell align="right">Actions</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {products.map((product) => (
+                                <TableRow key={product.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                                    <TableCell component="th" scope="row">{product.id}</TableCell>
+                                    <TableCell>{product.name}</TableCell>
+                                    <TableCell>{product.category?.name ?? 'N/A'}</TableCell>
+                                    <TableCell>{product.unit?.name ?? 'N/A'}</TableCell>
+                                    <TableCell>{product.manufacturer?.name ?? 'N/A'}</TableCell>
+                                    <TableCell>{product.origin?.name ?? 'N/A'}</TableCell>
+                                    <TableCell align="right">
+                                        <IconButton component={Link} to={`/products/${product.id}/edit`} color="primary" aria-label="edit product" size="small">
+                                            <EditIcon fontSize="inherit" />
+                                        </IconButton>
+                                        <IconButton color="error" aria-label="delete product" size="small" onClick={() => handleDelete(product.id, product.name)} disabled={isDeleting && deletingId === product.id}>
+                                            {isDeleting && deletingId === product.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
+                                        </IconButton>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
             )}
-        </div>
+        </Container>
     );
 };
 
