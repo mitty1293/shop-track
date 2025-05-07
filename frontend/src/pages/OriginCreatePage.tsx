@@ -3,6 +3,16 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import { createOrigin, OriginInput } from '../api/client';
 
+// --- Material UI ---
+import Container from '@mui/material/Container';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+
 const OriginCreatePage: React.FC = () => {
     const [name, setName] = useState('');
     const [formError, setFormError] = useState<string | null>(null);
@@ -30,19 +40,71 @@ const OriginCreatePage: React.FC = () => {
     };
 
     return (
-        <div>
-            <h1>Create New Origin</h1>
-            <form onSubmit={handleSubmit}>
-                <div>
-                    <label htmlFor="name">Name:</label>
-                    <input id="name" type="text" value={name} onChange={e => setName(e.target.value)} disabled={isPending} />
-                </div>
-                {formError && <div style={{ color: 'red' }}>{formError}</div>}
-                {mutationError && <div style={{ color: 'red' }}>{mutationError.message}</div>}
-                <button type="submit" disabled={isPending}>{isPending ? 'Saving...' : 'Save'}</button>
-                <button type="button" onClick={() => navigate('/origins')} disabled={isPending}>Cancel</button>
-            </form>
-        </div>
+        <Container maxWidth="sm" sx={{ mt: 2 }}>
+            <Typography variant="h4" component="h1" gutterBottom>
+                Create New Origin
+            </Typography>
+            <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+                <Stack spacing={2}>
+                    <TextField
+                        variant="outlined"
+                        margin="normal"
+                        required
+                        fullWidth
+                        id="name"
+                        label="Origin Name"
+                        name="name"
+                        autoComplete="origin-name"
+                        autoFocus
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        disabled={isPending}
+                        error={!!formError && !name || (!!mutationError && !!mutationError.message.toLowerCase().includes('name'))}
+                        helperText={ (formError && !name) ? formError :
+                                    (mutationError && mutationError.message.toLowerCase().includes('name')) ? mutationError.message : '' }
+                    />
+            
+                    {/* Mutation の一般的なエラーメッセージ (フィールド固有でない場合) */}
+                    {mutationError && !mutationError.message.toLowerCase().includes('name') && (
+                        <Alert severity="error" sx={{ mt: 1 }}>{mutationError.message}</Alert>
+                    )}
+                    {/* フォーム固有のエラーで、フィールドに直接関連しないもの（例：全体的なエラー）*/}
+                    {formError && name && <Alert severity="error" sx={{ mt: 1 }}>{formError}</Alert>}
+
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
+                        <Button
+                            type="button"
+                            variant="outlined"
+                            onClick={() => navigate('/origins')}
+                            disabled={isPending}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            disabled={isPending}
+                            sx={{ position: 'relative' }}
+                        >
+                            {isPending ? 'Saving...' : 'Save'}
+                            {isPending && (
+                                <CircularProgress
+                                    size={24}
+                                    sx={{
+                                        color: 'primary.contrastText',
+                                        position: 'absolute',
+                                        top: '50%',
+                                        left: '50%',
+                                        marginTop: '-12px',
+                                        marginLeft: '-12px',
+                                    }}
+                                />
+                            )}
+                        </Button>
+                    </Box>
+                </Stack>
+            </Box>
+        </Container>
     );
 };
 export default OriginCreatePage;
