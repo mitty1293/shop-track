@@ -16,6 +16,20 @@ import {
     getOrigins,
 } from '../api/client';
 
+// --- Material UI ---
+import Container from '@mui/material/Container';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select, { SelectChangeEvent } from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+
 const ProductEditPage: React.FC = () => {
     // --- Hooks の初期化 ---
     const { id } = useParams<{ id: string }>(); // URL パラメータから ':id' を文字列として取得
@@ -33,7 +47,6 @@ const ProductEditPage: React.FC = () => {
     const [formError, setFormError] = useState<string | null>(null);
 
     // --- データ取得 (Tanstack Query: useQuery) ---
-
     // 1. 編集対象の商品データを取得
     const {
         data: productData, // 取得したデータ (Product | undefined)
@@ -86,13 +99,14 @@ const ProductEditPage: React.FC = () => {
                 navigate('/products'); // パスは App.tsx の設定に合わせる
             },
             // Mutation 失敗時のコールバック
-            onError: (error) => {
-                console.error('商品更新エラー:', error);
-                // エラーメッセージを state にセットしてユーザーに表示
-                setFormError(error instanceof Error ? error.message : '商品更新中にエラーが発生しました。');
-            },
+            onError: (error) => { setFormError(error.message); },
         });
 
+    // --- ドロップダウンの選択変更処理 ---
+    const handleSelectChange = (event: SelectChangeEvent<number | ''>, setter: React.Dispatch<React.SetStateAction<number | ''>>) => {
+        setter(event.target.value as (number | ''));
+    };
+    
     // --- フォーム送信時の処理 ---
     const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault(); // HTML 標準のフォーム送信動作を抑制
@@ -117,117 +131,132 @@ const ProductEditPage: React.FC = () => {
 
     // --- レンダリング前のローディング・エラーチェック ---
     // ドロップダウンデータ全体のローディング状態
-    const isLoadingDropdownData = isLoadingCategories || isLoadingUnits || isLoadingManufacturers || isLoadingOrigins;
+    const isLoading = isLoadingProduct || isLoadingCategories || isLoadingUnits || isLoadingManufacturers || isLoadingOrigins;
 
-    // 商品データ、またはドロップダウンデータのいずれかがローディング中ならローディング表示
-    if (isLoadingProduct || isLoadingDropdownData) {
-        return <div>データを読み込み中...</div>;
+    // ローディング中ならローディング表示
+    if (isLoading) {
+        return (
+            <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+                <CircularProgress />
+            </Container>
+        );
     }
 
     // 商品データの取得でエラーが発生した場合
     if (isErrorProduct) {
-        return <div>商品データの読み込み中にエラーが発生しました: {productError?.message}</div>;
+        return (
+            <Container maxWidth="md" sx={{ mt: 2 }}>
+                <Alert severity="error">Error loading product data: {productError?.message}</Alert>
+            </Container>
+        );
     }
 
     // 商品データが存在しない場合 (ID が不正、削除済みなど)
     if (!productData) {
-        return <div>指定された商品が見つかりません。ID: {productId}</div>
+        return (
+            <Container maxWidth="md" sx={{ mt: 2 }}>
+                <Alert severity="warning">Product not found (ID: {productId}).</Alert>
+            </Container>
+        );
     }
 
     // --- JSX によるフォームのレンダリング ---
     return (
-        <div>
-            <h1>商品を編集 (ID: {productId})</h1>
-            <button onClick={() => navigate('/products')}>商品一覧に戻る</button>
-            <form onSubmit={handleSubmit}>
-                <div>
-                    <label htmlFor="name">商品名:</label>
-                    <input
-                        type="text"
-                        id="name"
-                        value={name} // state の値が表示される (useEffect で初期化済み)
-                        onChange={(e) => setName(e.target.value)} // 入力で state を更新
-                        required
-                        disabled={isPending} // 更新処理中は無効化
+        <Container maxWidth="sm" sx={{ mt: 2 }}>
+            <Typography variant="h4" component="h1" gutterBottom>
+                Edit Product (ID: {productId})
+            </Typography>
+            <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+                <Stack spacing={2}>
+                    <TextField
+                        variant="outlined" margin="normal" required fullWidth autoFocus
+                        id="name" label="Product Name" name="name"
+                        value={name} onChange={(e) => setName(e.target.value)}
+                        disabled={isPending}
+                        error={!!formError && !name}
+                        helperText={(!!formError && !name) ? "Name is required" : ""}
                     />
-                </div>
-
-                <div>
-                    <label htmlFor="category">カテゴリ:</label>
-                    <select
-                        id="category"
-                        value={categoryId} // state の値が選択される
-                        onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : '')}
-                        required
-                        disabled={isPending}
-                    >
-                        <option value="">選択してください</option>
-                        {categories?.map((category) => (
-                            <option key={category.id} value={category.id}>{category.name}</option>
-                        ))}
-                    </select>
-                </div>
-
-                <div>
-                    <label htmlFor="unit">単位:</label>
-                    <select
-                        id="unit"
-                        value={unitId}
-                        onChange={(e) => setUnitId(e.target.value ? Number(e.target.value) : '')}
-                        required
-                        disabled={isPending}
-                    >
-                        <option value="">選択してください</option>
-                        {units?.map((unit) => (
-                            <option key={unit.id} value={unit.id}>{unit.name}</option>
-                        ))}
-                    </select>
-                </div>
-
-                <div>
-                    <label htmlFor="manufacturer">製造者:</label>
-                    <select
-                        id="manufacturer"
-                        value={manufacturerId}
-                        onChange={(e) => setManufacturerId(e.target.value ? Number(e.target.value) : '')}
-                        disabled={isPending}
-                    >
-                        <option value="">(指定しない)</option>
-                        {manufacturers?.map((manufacturer) => (
-                            <option key={manufacturer.id} value={manufacturer.id}>{manufacturer.name}</option>
-                        ))}
-                    </select>
-                </div>
-
-                <div>
-                    <label htmlFor="origin">原産国:</label>
-                    <select
-                        id="origin"
-                        value={originId}
-                        onChange={(e) => setOriginId(e.target.value ? Number(e.target.value) : '')}
-                        disabled={isPending}
-                    >
-                        <option value="">(指定しない)</option>
-                        {origins?.map((origin) => (
-                            <option key={origin.id} value={origin.id}>{origin.name}</option>
-                        ))}
-                    </select>
-                </div>
-
-                {/* エラーメッセージ表示エリア */}
-                {formError && <div style={{ color: 'red' }}>エラー: {formError}</div>}
-                {mutationError && <div style={{ color: 'red' }}>更新エラー: {mutationError.message}</div>}
-
-                {/* 送信ボタンとキャンセルボタン */}
-                <button type="submit" disabled={isPending || isLoadingProduct || isLoadingDropdownData}>
-                    {isPending ? '更新中...' : '更新する'}
-                </button>
-                <button type="button" onClick={() => navigate('/products')} disabled={isPending}>
-                    キャンセル
-                </button>
-            </form>
-        </div>
-    );
+            
+                    {/* Category Select */}
+                    <FormControl fullWidth margin="normal" required disabled={isPending} error={!!formError && !categoryId}>
+                        <InputLabel id="category-select-label">Category</InputLabel>
+                        <Select
+                            labelId="category-select-label" id="category-select"
+                            value={categoryId} label="Category"
+                            onChange={(e) => handleSelectChange(e as SelectChangeEvent<number | ''>, setCategoryId)}
+                        >
+                            <MenuItem value=""><em>Select Category...</em></MenuItem>
+                            {categories?.map((category) => (
+                                <MenuItem key={category.id} value={category.id}>{category.name}</MenuItem>
+                            ))}
+                        </Select>
+                        {(!!formError && !categoryId) && <Typography color="error" variant="caption">Category is required</Typography>}
+                    </FormControl>
+            
+                    {/* Unit Select */}
+                    <FormControl fullWidth margin="normal" required disabled={isPending} error={!!formError && !unitId}>
+                        <InputLabel id="unit-select-label">Unit</InputLabel>
+                        <Select
+                            labelId="unit-select-label" id="unit-select"
+                            value={unitId} label="Unit"
+                            onChange={(e) => handleSelectChange(e as SelectChangeEvent<number | ''>, setUnitId)}
+                        >
+                            <MenuItem value=""><em>Select Unit...</em></MenuItem>
+                            {units?.map((unit) => (
+                                <MenuItem key={unit.id} value={unit.id}>{unit.name}</MenuItem>
+                            ))}
+                        </Select>
+                        {(!!formError && !unitId) && <Typography color="error" variant="caption">Unit is required</Typography>}
+                    </FormControl>
+            
+                    {/* Manufacturer Select (Optional) */}
+                    <FormControl fullWidth margin="normal" disabled={isPending}>
+                        <InputLabel id="manufacturer-select-label">Manufacturer (Optional)</InputLabel>
+                        <Select
+                            labelId="manufacturer-select-label" id="manufacturer-select"
+                            value={manufacturerId} label="Manufacturer (Optional)"
+                            onChange={(e) => handleSelectChange(e as SelectChangeEvent<number | ''>, setManufacturerId)}
+                        >
+                            <MenuItem value=""><em>None</em></MenuItem>
+                            {manufacturers?.map((manufacturer) => (
+                                <MenuItem key={manufacturer.id} value={manufacturer.id}>{manufacturer.name}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+            
+                    {/* Origin Select (Optional) */}
+                    <FormControl fullWidth margin="normal" disabled={isPending}>
+                        <InputLabel id="origin-select-label">Origin (Optional)</InputLabel>
+                        <Select
+                            labelId="origin-select-label" id="origin-select"
+                            value={originId} label="Origin (Optional)"
+                            onChange={(e) => handleSelectChange(e as SelectChangeEvent<number | ''>, setOriginId)}
+                        >
+                            <MenuItem value=""><em>None</em></MenuItem>
+                            {origins?.map((origin) => (
+                                <MenuItem key={origin.id} value={origin.id}>{origin.name}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+            
+                    {mutationError && (
+                        <Alert severity="error" sx={{ mt: 1 }}>{mutationError.message}</Alert>
+                    )}
+                    {formError && (name && categoryId && unitId) && <Alert severity="error" sx={{ mt: 1 }}>{formError}</Alert>}
+            
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
+                        <Button variant="outlined" onClick={() => navigate('/products')} disabled={isPending}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" variant="contained" disabled={isPending || isLoading} sx={{ position: 'relative' }}>
+                            {isPending ? 'Saving...' : 'Save Changes'}
+                            {isPending && <CircularProgress size={24} sx={{ position: 'absolute', top: '50%', left: '50%', marginTop: '-12px', marginLeft: '-12px', color: 'primary.contrastText' }} />}
+                        </Button>
+                    </Box>
+                </Stack>
+            </Box>
+        </Container>
+      );
 };
 
 export default ProductEditPage;
