@@ -3,6 +3,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router';
 import { getStoreById, updateStore, PatchedStoreInput } from '../api/client';
 
+// --- Material UI ---
+import Container from '@mui/material/Container';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Stack from '@mui/material/Stack';
+import CircularProgress from '@mui/material/CircularProgress';
+import Alert from '@mui/material/Alert';
+
 const StoreEditPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const storeId = Number(id);
@@ -49,28 +59,107 @@ const StoreEditPage: React.FC = () => {
     };
 
     // --- レンダリング前のローディング・エラーチェック ---
-    if (isLoading) return <div>Loading...</div>;
-    if (isError) return <div>Error: {error instanceof Error ? error.message : 'Unknown error'}</div>;
-    if (!storeData) return <div>Store not found.</div>;
+    if (isLoading) {
+        return (
+          <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <CircularProgress />
+          </Container>
+        );
+      }
+      if (isError) {
+        return (
+          <Container maxWidth="md" sx={{ mt: 2 }}>
+            <Alert severity="error">
+              Error loading store data: {error?.message}
+            </Alert>
+          </Container>
+        );
+      }
+      if (!storeData) {
+        return (
+          <Container maxWidth="md" sx={{ mt: 2 }}>
+            <Alert severity="warning">Store not found (ID: {storeId}).</Alert>
+          </Container>
+        );
+      }
 
-    return (
-        <div>
-            <h1>Edit Store (ID: {storeId})</h1>
-            <form onSubmit={handleSubmit}>
-                <div>
-                    <label htmlFor="name">Name:</label>
-                    <input id="name" type="text" value={name} onChange={e => setName(e.target.value)} disabled={isPending} />
-                </div>
-                <div>
-                    <label htmlFor="location">Location:</label>
-                    <input id="location" type="text" value={location} onChange={e => setLocation(e.target.value)} disabled={isPending} />
-                </div>
-                {formError && <div style={{ color: 'red' }}>{formError}</div>}
-                {mutationError && <div style={{ color: 'red' }}>{mutationError.message}</div>}
-                <button type="submit" disabled={isPending}>{isPending ? 'Saving...' : 'Save Changes'}</button>
-                <button type="button" onClick={() => navigate('/stores')} disabled={isPending}>Cancel</button>
-            </form>
-        </div>
+      return (
+        <Container maxWidth="sm" sx={{ mt: 2 }}>
+            <Typography variant="h4" component="h1" gutterBottom>
+                Edit Store (ID: {storeId})
+            </Typography>
+            <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+                <Stack spacing={2}>
+                    <TextField
+                        variant="outlined"
+                        margin="normal"
+                        required
+                        fullWidth
+                        id="name"
+                        label="Store Name"
+                        name="name"
+                        autoComplete="store-name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        disabled={isPending}
+                        error={!!formError && !name}
+                        helperText={(!!formError && !name) ? "Name is required" : ""}
+                    />
+                    <TextField
+                        variant="outlined"
+                        margin="normal"
+                        required
+                        fullWidth
+                        id="location"
+                        label="Location"
+                        name="location"
+                        autoComplete="store-location"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        disabled={isPending}
+                        error={!!formError && !location}
+                        helperText={(!!formError && !location) ? "Location is required" : ""}
+                    />
+            
+                    {/* Mutation エラー表示 */}
+                    {mutationError && (
+                        <Alert severity="error" sx={{ mt: 1 }}>{mutationError.message}</Alert>
+                    )}
+                    {/* フォーム固有のエラーで、フィールドに直接関連しないもの */}
+                    {formError && (name && location) && <Alert severity="error" sx={{ mt: 1 }}>{formError}</Alert>}
+            
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
+                        <Button
+                            type="button"
+                            variant="outlined"
+                            onClick={() => navigate('/stores')}
+                            disabled={isPending}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            disabled={isPending}
+                            sx={{ position: 'relative' }}
+                        >
+                            {isPending ? 'Saving...' : 'Save Changes'}
+                            {isPending && (
+                                <CircularProgress
+                                    size={24}
+                                    sx={{
+                                        color: 'primary.contrastText',
+                                        position: 'absolute',
+                                        top: '50%', left: '50%',
+                                        marginTop: '-12px', marginLeft: '-12px',
+                                    }}
+                                />
+                            )}
+                        </Button>
+                    </Box>
+                </Stack>
+            </Box>
+        </Container>
     );
 };
 export default StoreEditPage;
