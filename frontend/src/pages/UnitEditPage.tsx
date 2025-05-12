@@ -1,15 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router';
 import { getUnitById, updateUnit, PatchedUnitInput } from '../api/client';
+import UnitForm from '../components/UnitForm';
 
 // --- Material UI ---
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
-import Box from '@mui/material/Box';
-import TextField from '@mui/material/TextField';
-import Button from '@mui/material/Button';
-import Stack from '@mui/material/Stack';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 
@@ -18,8 +15,6 @@ const UnitEditPage: React.FC = () => {
     const unitId = Number(id);
     const navigate = useNavigate();
     const queryClient = useQueryClient();
-    const [name, setName] = useState('');
-    const [formError, setFormError] = useState<string | null>(null);
 
     // 編集対象のデータを取得
     const { data: unitData, isLoading, isError, error } = useQuery({
@@ -27,9 +22,6 @@ const UnitEditPage: React.FC = () => {
         queryFn: () => getUnitById(unitId),
         enabled: !!unitId && !isNaN(unitId),
     });
-
-    // --- フォームの初期値を設定 (React: useEffect) ---
-    useEffect(() => { if (unitData) setName(unitData.name); }, [unitData]);
 
     // --- 更新処理 (Tanstack Query: useMutation) ---
     const { mutate, isPending, error: mutationError } = useMutation({
@@ -40,16 +32,16 @@ const UnitEditPage: React.FC = () => {
             queryClient.invalidateQueries({ queryKey: ['units'] });
             navigate('/units');
         },
-        onError: (error) => { setFormError(error.message); },
     });
 
-    // --- フォーム送信時の処理 ---
-    const handleSubmit = (event: React.FormEvent) => {
-        event.preventDefault();
-        setFormError(null);
-        if (!name) { setFormError('Name is required.'); return; }
-        const patchedData: PatchedUnitInput = { name };
-        mutate(patchedData);
+    // --- フォーム送信時の処理 (UnitForm へ渡す) ---
+    const handleFormSubmit = (data: PatchedUnitInput) => {
+        mutate(data); // mutate を呼び出す
+    };
+
+    // --- キャンセル処理 (UnitForm へ渡す) ---
+    const handleCancel = () => {
+        navigate('/units');
     };
 
     // --- レンダリング前のローディング・エラーチェック ---
@@ -79,66 +71,22 @@ const UnitEditPage: React.FC = () => {
 
     return (
         <Container maxWidth="sm" sx={{ mt: 2 }}>
-            <Typography variant="h4" component="h1" gutterBottom>
-                Edit Unit (ID: {unitId})
-            </Typography>
-            <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
-                <Stack spacing={2}>
-                    <TextField
-                        variant="outlined"
-                        margin="normal"
-                        required
-                        fullWidth
-                        id="name"
-                        label="Unit Name"
-                        name="name"
-                        autoComplete="unit-name"
-                        autoFocus
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        disabled={isPending}
-                        error={!!formError && !name}
-                        helperText={(!!formError && !name) ? "Name is required" : ""}
-                    />
-            
-                    {/* Mutation エラー表示 */}
-                    {mutationError && (
-                        <Alert severity="error" sx={{ mt: 1 }}>{mutationError.message}</Alert>
-                    )}
-                    {/* フォーム固有のエラー表示（必須チェックなど） */}
-                    {formError && name && <Alert severity="error" sx={{ mt: 1 }}>{formError}</Alert>}
-            
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mt: 2 }}>
-                        <Button
-                            type="button"
-                            variant="outlined"
-                            onClick={() => navigate('/units')}
-                            disabled={isPending}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            variant="contained"
-                            disabled={isPending}
-                            sx={{ position: 'relative' }}
-                        >
-                            {isPending ? 'Saving...' : 'Save Changes'}
-                            {isPending && (
-                                <CircularProgress
-                                    size={24}
-                                    sx={{
-                                        color: 'primary.contrastText',
-                                        position: 'absolute', top: '50%', left: '50%',
-                                        marginTop: '-12px', marginLeft: '-12px',
-                                    }}
-                                />
-                            )}
-                        </Button>
-                    </Box>
-                </Stack>
-            </Box>
+        <Typography variant="h4" component="h1" gutterBottom>
+            Edit Unit (ID: {unitId})
+        </Typography>
+        {/* ★ 共通フォームコンポーネントをレンダリング */}
+        <UnitForm
+            initialData={unitData} // ★ 取得したデータを渡す
+            onSubmit={handleFormSubmit}
+            onCancel={handleCancel}
+            isSubmitting={isPending}
+            submitError={mutationError?.message} // エラーメッセージを渡す
+        />
+        {/* 予期せぬエラーなどが Mutation にあれば表示 */}
+        {mutationError && !mutationError.message && (
+            <Alert severity="error" sx={{ mt: 1 }}>An unexpected error occurred.</Alert>
+        )}
         </Container>
-    );
+  );
 };
 export default UnitEditPage;
