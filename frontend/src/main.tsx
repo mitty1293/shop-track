@@ -14,15 +14,28 @@ import '@fontsource/roboto/700.css'; // Bold
 // Material UI
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { grey, deepPurple, purple } from '@mui/material/colors';
 
 const queryClient = new QueryClient()
 
 const theme = createTheme({
   // ここでテーマをカスタマイズできます
-  // palette: {
-  //   primary: { main: '#1976d2' },
-  //   secondary: { main: '#dc004e' },
-  // },
+  palette: {
+    primary: {
+      main: grey[600],
+    },
+    background: {
+      default: grey[100],
+      paper: '#ffffff',
+    },
+    text: {
+      primary: grey[900],
+      secondary: grey[700],
+    },
+    action: {
+      active: grey[600],
+    }
+  },
 });
 
 createRoot(document.getElementById('root')!).render(
