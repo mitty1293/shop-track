@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import { getStores, deleteStore } from '../api/client';
+import { getStores, deleteStore, Store } from '../api/client';
+import ConfirmationDialog from '../components/ConfirmationDialog';
 
 // --- Material UI ---
 import Container from '@mui/material/Container';
@@ -24,27 +25,45 @@ import DeleteIcon from '@mui/icons-material/Delete';
 const StoreListPage: React.FC = () => {
     const queryClient = useQueryClient();
 
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
+
     const { data: stores, isLoading, isError, error } = useQuery({
         queryKey: ['stores'], // ★ クエリキー
         queryFn: getStores,   // ★ 取得関数
     });
 
-    const { mutate, isPending: isDeleting, variables: deletingId } = useMutation({
+    const { mutate, isPending: isDeleting } = useMutation({
         mutationFn: deleteStore, // ★ 削除関数
-        onSuccess: (_, id) => {
-        console.log(`Store (ID: ${id}) deleted successfully`);
-        queryClient.invalidateQueries({ queryKey: ['stores'] }); // ★ クエリキー
+        onSuccess: (_, deletedStoreId) => {
+            console.log(`Store (ID: ${deletedStoreId}) deleted successfully`);
+            queryClient.invalidateQueries({ queryKey: ['stores'] }); // ★ クエリキー
+            handleDialogClose();
         },
-        onError: (err, id) => {
-        console.error(`Error deleting store (ID: ${id}):`, err);
-        alert(`Error deleting store: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        onError: (err, deletedStoreId) => {
+            console.error(`Error deleting store (ID: ${deletedStoreId}):`, err);
+            alert(`Error deleting store: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            handleDialogClose();
         },
     });
 
-    const handleDelete = (id: number, name: string) => {
-        if (window.confirm(`Delete store "${name}" (ID: ${id})?`)) {
-        mutate(id);
+    // --- 削除ボタンクリック時の処理を変更 ---
+    const handleDeleteClick = (store: Store) => {
+        setStoreToDelete(store);
+        setDialogOpen(true);
+    };
+
+    // --- ダイアログの確認ボタン押下時の処理 ---
+    const handleConfirmDelete = () => {
+        if (storeToDelete) {
+            mutate(storeToDelete.id);
         }
+    };
+
+    // --- ダイアログのクローズ処理 ---
+    const handleDialogClose = () => {
+        setDialogOpen(false);
+        setStoreToDelete(null);
     };
 
     if (isLoading) {
@@ -85,12 +104,12 @@ const StoreListPage: React.FC = () => {
                 <TableContainer component={Paper}>
                     <Table sx={{ minWidth: 650 }} aria-label="store table">
                         <TableHead>
-                            <TableRow>
-                                <TableCell>ID</TableCell>
-                                <TableCell>Name</TableCell>
-                                <TableCell>Location</TableCell>
-                                <TableCell align="right">Actions</TableCell>
-                            </TableRow>
+                        <TableRow>
+                            <TableCell>ID</TableCell>
+                            <TableCell>Name</TableCell>
+                            <TableCell>Location</TableCell>
+                            <TableCell align="right">Actions</TableCell>
+                        </TableRow>
                         </TableHead>
                         <TableBody>
                             {stores.map((store) => (
@@ -102,15 +121,41 @@ const StoreListPage: React.FC = () => {
                                         <IconButton component={Link} to={`/stores/${store.id}/edit`} color="primary" aria-label="edit store" size="small">
                                             <EditIcon fontSize="inherit" />
                                         </IconButton>
-                                        <IconButton color="error" aria-label="delete store" size="small" onClick={() => handleDelete(store.id, store.name)} disabled={isDeleting && deletingId === store.id}>
-                                            {isDeleting && deletingId === store.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
+                                        <IconButton
+                                            color="error"
+                                            aria-label="delete store"
+                                            size="small"
+                                            onClick={() => handleDeleteClick(store)}
+                                            disabled={isDeleting && storeToDelete?.id === store.id}
+                                        >
+                                            {isDeleting && storeToDelete?.id === store.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
                                         </IconButton>
                                     </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
-                    </Table>
+                </Table>
                 </TableContainer>
+            )}
+
+            {/* ★ 確認ダイアログのレンダリング */}
+            {storeToDelete && (
+                <ConfirmationDialog
+                    open={dialogOpen}
+                    onClose={handleDialogClose}
+                    onConfirm={handleConfirmDelete}
+                    title="Confirm Store Deletion"
+                    message={
+                        <>
+                        Are you sure you want to delete the store
+                        "<strong>{storeToDelete.name}</strong>" (Location: {storeToDelete.location}, ID: {storeToDelete.id})?
+                        <br />
+                        This action cannot be undone.
+                        </>
+                    }
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                />
             )}
         </Container>
     );
