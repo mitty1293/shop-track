@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import { getOrigins, deleteOrigin } from '../api/client';
+import { getOrigins, deleteOrigin, Origin } from '../api/client';
+import ConfirmationDialog from '../components/ConfirmationDialog';
 
 // --- Material UI ---
 import Container from '@mui/material/Container'; // 全体のコンテナ
@@ -24,6 +25,11 @@ import DeleteIcon from '@mui/icons-material/Delete'; // 削除アイコン
 const OriginListPage: React.FC = () => {
     const queryClient = useQueryClient();
 
+    // --- ダイアログの状態管理 ---
+    const [dialogOpen, setDialogOpen] = useState(false);
+    // 削除対象のカテゴリ情報を保持 (IDと名前など)
+    const [originToDelete, setOriginToDelete] = useState<Origin | null>(null);
+
     // --- 一覧の取得 (useQuery) ---
     const { data: origins, isLoading, isError, error } = useQuery({
         queryKey: ['origins'], // ★ クエリキー
@@ -31,23 +37,39 @@ const OriginListPage: React.FC = () => {
     });
 
     // --- 削除処理 (useMutation) ---
-    const { mutate, isPending: isDeleting, variables: deletingId } = useMutation({
-        mutationFn: deleteOrigin, // ★ 削除関数
-        onSuccess: (_, id) => {
-        console.log(`Origin (ID: ${id}) deleted successfully`);
-        queryClient.invalidateQueries({ queryKey: ['origins'] }); // ★ クエリキー
+    const { mutate, isPending: isDeleting } = useMutation({
+        mutationFn: deleteOrigin,
+        onSuccess: (_, deletedOriginId) => {
+            console.log(`Origin (ID: ${deletedOriginId}) deleted successfully`);
+            queryClient.invalidateQueries({ queryKey: ['origins'] });
+            setDialogOpen(false);
+            setOriginToDelete(null);
         },
-        onError: (err, id) => {
-        console.error(`Error deleting origin (ID: ${id}):`, err);
-        alert(`Error deleting origin: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        onError: (err, deletedOriginId) => {
+            console.error(`Error deleting origin (ID: ${deletedOriginId}):`, err);
+            alert(`Error deleting origin: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            setDialogOpen(false);
+            setOriginToDelete(null);
         },
     });
 
-    // --- 削除ボタンのクリックハンドラ ---
-    const handleDelete = (id: number, name: string) => {
-        if (window.confirm(`Delete origin "${name}" (ID: ${id})?`)) {
-        mutate(id);
+    // --- 削除ボタンクリック時の処理 ---
+    const handleDeleteClick = (origin: Origin) => {
+        setOriginToDelete(origin); // 削除対象のカテゴリ情報をセット
+        setDialogOpen(true);          // ダイアログを開く
+    };
+
+    // --- ダイアログの確認ボタン押下時の処理 ---
+    const handleConfirmDelete = () => {
+        if (originToDelete) {
+            mutate(originToDelete.id); // mutate を呼び出し
         }
+    };
+
+    // --- ダイアログのクローズ処理 ---
+    const handleDialogClose = () => {
+        setDialogOpen(false);
+        setOriginToDelete(null); // ダイアログを閉じたら削除対象もリセット
     };
 
     if (isLoading) {
@@ -115,12 +137,12 @@ const OriginListPage: React.FC = () => {
                                             color="error"
                                             aria-label="delete origin"
                                             size="small"
-                                            onClick={() => handleDelete(origin.id, origin.name)}
+                                            onClick={() => handleDeleteClick(origin)}
                                             // 削除処理中はボタンを無効化
-                                            disabled={isDeleting && deletingId === origin.id}
+                                            disabled={isDeleting && originToDelete?.id === origin.id}
                                         >
                                             {/* 削除処理中はアイコンの代わりにローディング表示 */}
-                                            {isDeleting && deletingId === origin.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
+                                            {isDeleting && originToDelete?.id === origin.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
                                         </IconButton>
                                     </TableCell>
                                 </TableRow>
@@ -128,6 +150,24 @@ const OriginListPage: React.FC = () => {
                         </TableBody>
                     </Table>
                 </TableContainer>
+            )}
+            {originToDelete && ( // originToDelete がある場合のみダイアログを意味のあるものとしてレンダリング
+                <ConfirmationDialog
+                    open={dialogOpen}
+                    onClose={handleDialogClose}
+                    onConfirm={handleConfirmDelete}
+                    title="Confirm Deletion"
+                    message={
+                        <>
+                        Are you sure you want to delete the origin
+                        "<strong>{originToDelete.name}</strong>" (ID: {originToDelete.id})?
+                        <br />
+                        This action cannot be undone.
+                        </>
+                    }
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                />
             )}
         </Container>
     );

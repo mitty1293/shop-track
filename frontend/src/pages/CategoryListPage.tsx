@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import { getCategories, deleteCategory } from '../api/client';
+import { getCategories, deleteCategory, Category } from '../api/client';
+import ConfirmationDialog from '../components/ConfirmationDialog';
 
 // --- Material UI ---
 import Container from '@mui/material/Container'; // 全体のコンテナ
@@ -24,6 +25,11 @@ import DeleteIcon from '@mui/icons-material/Delete'; // 削除アイコン
 const CategoryListPage: React.FC = () => {
     const queryClient = useQueryClient();
 
+    // --- ダイアログの状態管理 ---
+    const [dialogOpen, setDialogOpen] = useState(false);
+    // 削除対象のカテゴリ情報を保持 (IDと名前など)
+    const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
+
     // --- 一覧の取得 (useQuery) ---
     const { data: categories, isLoading, isError, error } = useQuery({
         queryKey: ['categories'], // ★ クエリキー
@@ -31,23 +37,39 @@ const CategoryListPage: React.FC = () => {
     });
 
     // --- 削除処理 (useMutation) ---
-    const { mutate, isPending: isDeleting, variables: deletingId } = useMutation({
-        mutationFn: deleteCategory, // ★ 削除関数
-        onSuccess: (_, id) => {
-        console.log(`Category (ID: ${id}) deleted successfully`);
-        queryClient.invalidateQueries({ queryKey: ['categories'] }); // ★ クエリキー
+    const { mutate, isPending: isDeleting } = useMutation({
+        mutationFn: deleteCategory,
+        onSuccess: (_, deletedCategoryId) => {
+            console.log(`Category (ID: ${deletedCategoryId}) deleted successfully`);
+            queryClient.invalidateQueries({ queryKey: ['categories'] });
+            setDialogOpen(false);
+            setCategoryToDelete(null);
         },
-        onError: (err, id) => {
-        console.error(`Error deleting category (ID: ${id}):`, err);
-        alert(`Error deleting category: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        onError: (err, deletedCategoryId) => {
+            console.error(`Error deleting category (ID: ${deletedCategoryId}):`, err);
+            alert(`Error deleting category: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            setDialogOpen(false);
+            setCategoryToDelete(null);
         },
     });
 
-    // --- 削除ボタンのクリックハンドラ ---
-    const handleDelete = (id: number, name: string) => {
-        if (window.confirm(`Delete category "${name}" (ID: ${id})?`)) {
-        mutate(id);
+    // --- 削除ボタンクリック時の処理 ---
+    const handleDeleteClick = (category: Category) => {
+        setCategoryToDelete(category); // 削除対象のカテゴリ情報をセット
+        setDialogOpen(true);          // ダイアログを開く
+    };
+
+    // --- ダイアログの確認ボタン押下時の処理 ---
+    const handleConfirmDelete = () => {
+        if (categoryToDelete) {
+            mutate(categoryToDelete.id); // mutate を呼び出し
         }
+    };
+
+    // --- ダイアログのクローズ処理 ---
+    const handleDialogClose = () => {
+        setDialogOpen(false);
+        setCategoryToDelete(null); // ダイアログを閉じたら削除対象もリセット
     };
 
     if (isLoading) {
@@ -115,12 +137,12 @@ const CategoryListPage: React.FC = () => {
                                             color="error"
                                             aria-label="delete category"
                                             size="small"
-                                            onClick={() => handleDelete(category.id, category.name)}
+                                            onClick={() => handleDeleteClick(category)}
                                             // 削除処理中はボタンを無効化
-                                            disabled={isDeleting && deletingId === category.id}
+                                            disabled={isDeleting && categoryToDelete?.id === category.id}
                                         >
                                             {/* 削除処理中はアイコンの代わりにローディング表示 */}
-                                            {isDeleting && deletingId === category.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
+                                            {isDeleting && categoryToDelete?.id === category.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
                                         </IconButton>
                                     </TableCell>
                                 </TableRow>
@@ -128,6 +150,24 @@ const CategoryListPage: React.FC = () => {
                         </TableBody>
                     </Table>
                 </TableContainer>
+            )}
+            {categoryToDelete && ( // categoryToDelete がある場合のみダイアログを意味のあるものとしてレンダリング
+                <ConfirmationDialog
+                    open={dialogOpen}
+                    onClose={handleDialogClose}
+                    onConfirm={handleConfirmDelete}
+                    title="Confirm Deletion"
+                    message={
+                        <>
+                        Are you sure you want to delete the category
+                        "<strong>{categoryToDelete.name}</strong>" (ID: {categoryToDelete.id})?
+                        <br />
+                        This action cannot be undone.
+                        </>
+                    }
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                />
             )}
         </Container>
     );

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import { getUnits, deleteUnit } from '../api/client';
+import { getUnits, deleteUnit, Unit } from '../api/client';
+import ConfirmationDialog from '../components/ConfirmationDialog';
 
 // --- Material UI ---
 import Container from '@mui/material/Container'; // 全体のコンテナ
@@ -24,6 +25,11 @@ import DeleteIcon from '@mui/icons-material/Delete'; // 削除アイコン
 const UnitListPage: React.FC = () => {
     const queryClient = useQueryClient();
 
+    // --- ダイアログの状態管理 ---
+    const [dialogOpen, setDialogOpen] = useState(false);
+    // 削除対象のカテゴリ情報を保持 (IDと名前など)
+    const [unitToDelete, setUnitToDelete] = useState<Unit | null>(null);
+
     // --- 一覧の取得 (useQuery) ---
     const { data: units, isLoading, isError, error } = useQuery({
         queryKey: ['units'], // ★ クエリキー
@@ -31,23 +37,39 @@ const UnitListPage: React.FC = () => {
     });
 
     // --- 削除処理 (useMutation) ---
-    const { mutate, isPending: isDeleting, variables: deletingId } = useMutation({
-        mutationFn: deleteUnit, // ★ 削除関数
-        onSuccess: (_, id) => {
-        console.log(`Unit (ID: ${id}) deleted successfully`);
-        queryClient.invalidateQueries({ queryKey: ['units'] }); // ★ クエリキー
+    const { mutate, isPending: isDeleting } = useMutation({
+        mutationFn: deleteUnit,
+        onSuccess: (_, deletedUnitId) => {
+            console.log(`Unit (ID: ${deletedUnitId}) deleted successfully`);
+            queryClient.invalidateQueries({ queryKey: ['units'] });
+            setDialogOpen(false);
+            setUnitToDelete(null);
         },
-        onError: (err, id) => {
-        console.error(`Error deleting unit (ID: ${id}):`, err);
-        alert(`Error deleting unit: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        onError: (err, deletedUnitId) => {
+            console.error(`Error deleting unit (ID: ${deletedUnitId}):`, err);
+            alert(`Error deleting unit: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            setDialogOpen(false);
+            setUnitToDelete(null);
         },
     });
 
-    // --- 削除ボタンのクリックハンドラ ---
-    const handleDelete = (id: number, name: string) => {
-        if (window.confirm(`Delete unit "${name}" (ID: ${id})?`)) {
-        mutate(id);
+    // --- 削除ボタンクリック時の処理 ---
+    const handleDeleteClick = (unit: Unit) => {
+        setUnitToDelete(unit); // 削除対象のカテゴリ情報をセット
+        setDialogOpen(true);          // ダイアログを開く
+    };
+
+    // --- ダイアログの確認ボタン押下時の処理 ---
+    const handleConfirmDelete = () => {
+        if (unitToDelete) {
+            mutate(unitToDelete.id); // mutate を呼び出し
         }
+    };
+
+    // --- ダイアログのクローズ処理 ---
+    const handleDialogClose = () => {
+        setDialogOpen(false);
+        setUnitToDelete(null); // ダイアログを閉じたら削除対象もリセット
     };
 
     if (isLoading) {
@@ -115,12 +137,12 @@ const UnitListPage: React.FC = () => {
                                             color="error"
                                             aria-label="delete unit"
                                             size="small"
-                                            onClick={() => handleDelete(unit.id, unit.name)}
+                                            onClick={() => handleDeleteClick(unit)}
                                             // 削除処理中はボタンを無効化
-                                            disabled={isDeleting && deletingId === unit.id}
+                                            disabled={isDeleting && unitToDelete?.id === unit.id}
                                         >
                                             {/* 削除処理中はアイコンの代わりにローディング表示 */}
-                                            {isDeleting && deletingId === unit.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
+                                            {isDeleting && unitToDelete?.id === unit.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
                                         </IconButton>
                                     </TableCell>
                                 </TableRow>
@@ -128,6 +150,24 @@ const UnitListPage: React.FC = () => {
                         </TableBody>
                     </Table>
                 </TableContainer>
+            )}
+            {unitToDelete && ( // unitToDelete がある場合のみダイアログを意味のあるものとしてレンダリング
+                <ConfirmationDialog
+                    open={dialogOpen}
+                    onClose={handleDialogClose}
+                    onConfirm={handleConfirmDelete}
+                    title="Confirm Deletion"
+                    message={
+                        <>
+                        Are you sure you want to delete the unit
+                        "<strong>{unitToDelete.name}</strong>" (ID: {unitToDelete.id})?
+                        <br />
+                        This action cannot be undone.
+                        </>
+                    }
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                />
             )}
         </Container>
     );

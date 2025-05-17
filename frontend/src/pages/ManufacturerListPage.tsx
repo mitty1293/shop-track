@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import { getManufacturers, deleteManufacturer } from '../api/client';
+import { getManufacturers, deleteManufacturer, Manufacturer } from '../api/client';
+import ConfirmationDialog from '../components/ConfirmationDialog';
 
 // --- Material UI ---
 import Container from '@mui/material/Container'; // 全体のコンテナ
@@ -24,6 +25,11 @@ import DeleteIcon from '@mui/icons-material/Delete'; // 削除アイコン
 const ManufacturerListPage: React.FC = () => {
     const queryClient = useQueryClient();
 
+    // --- ダイアログの状態管理 ---
+    const [dialogOpen, setDialogOpen] = useState(false);
+    // 削除対象のカテゴリ情報を保持 (IDと名前など)
+    const [manufacturerToDelete, setManufacturerToDelete] = useState<Manufacturer | null>(null);
+
     // --- 一覧の取得 (useQuery) ---
     const { data: manufacturers, isLoading, isError, error } = useQuery({
         queryKey: ['manufacturers'], // ★ クエリキー
@@ -31,23 +37,39 @@ const ManufacturerListPage: React.FC = () => {
     });
 
     // --- 削除処理 (useMutation) ---
-    const { mutate, isPending: isDeleting, variables: deletingId } = useMutation({
-        mutationFn: deleteManufacturer, // ★ 削除関数
-        onSuccess: (_, id) => {
-        console.log(`Manufacturer (ID: ${id}) deleted successfully`);
-        queryClient.invalidateQueries({ queryKey: ['manufacturers'] }); // ★ クエリキー
+    const { mutate, isPending: isDeleting } = useMutation({
+        mutationFn: deleteManufacturer,
+        onSuccess: (_, deletedManufacturerId) => {
+            console.log(`Manufacturer (ID: ${deletedManufacturerId}) deleted successfully`);
+            queryClient.invalidateQueries({ queryKey: ['manufacturers'] });
+            setDialogOpen(false);
+            setManufacturerToDelete(null);
         },
-        onError: (err, id) => {
-        console.error(`Error deleting manufacturer (ID: ${id}):`, err);
-        alert(`Error deleting manufacturer: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        onError: (err, deletedManufacturerId) => {
+            console.error(`Error deleting manufacturer (ID: ${deletedManufacturerId}):`, err);
+            alert(`Error deleting manufacturer: ${err instanceof Error ? err.message : 'Unknown error'}`);
+            setDialogOpen(false);
+            setManufacturerToDelete(null);
         },
     });
 
-    // --- 削除ボタンのクリックハンドラ ---
-    const handleDelete = (id: number, name: string) => {
-        if (window.confirm(`Delete manufacturer "${name}" (ID: ${id})?`)) {
-        mutate(id);
+    // --- 削除ボタンクリック時の処理 ---
+    const handleDeleteClick = (manufacturer: Manufacturer) => {
+        setManufacturerToDelete(manufacturer); // 削除対象のカテゴリ情報をセット
+        setDialogOpen(true);          // ダイアログを開く
+    };
+
+    // --- ダイアログの確認ボタン押下時の処理 ---
+    const handleConfirmDelete = () => {
+        if (manufacturerToDelete) {
+            mutate(manufacturerToDelete.id); // mutate を呼び出し
         }
+    };
+
+    // --- ダイアログのクローズ処理 ---
+    const handleDialogClose = () => {
+        setDialogOpen(false);
+        setManufacturerToDelete(null); // ダイアログを閉じたら削除対象もリセット
     };
 
     if (isLoading) {
@@ -115,12 +137,12 @@ const ManufacturerListPage: React.FC = () => {
                                             color="error"
                                             aria-label="delete manufacturer"
                                             size="small"
-                                            onClick={() => handleDelete(manufacturer.id, manufacturer.name)}
+                                            onClick={() => handleDeleteClick(manufacturer)}
                                             // 削除処理中はボタンを無効化
-                                            disabled={isDeleting && deletingId === manufacturer.id}
+                                            disabled={isDeleting && manufacturerToDelete?.id === manufacturer.id}
                                         >
                                             {/* 削除処理中はアイコンの代わりにローディング表示 */}
-                                            {isDeleting && deletingId === manufacturer.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
+                                            {isDeleting && manufacturerToDelete?.id === manufacturer.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
                                         </IconButton>
                                     </TableCell>
                                 </TableRow>
@@ -128,6 +150,24 @@ const ManufacturerListPage: React.FC = () => {
                         </TableBody>
                     </Table>
                 </TableContainer>
+            )}
+            {manufacturerToDelete && ( // manufacturerToDelete がある場合のみダイアログを意味のあるものとしてレンダリング
+                <ConfirmationDialog
+                    open={dialogOpen}
+                    onClose={handleDialogClose}
+                    onConfirm={handleConfirmDelete}
+                    title="Confirm Deletion"
+                    message={
+                        <>
+                        Are you sure you want to delete the manufacturer
+                        "<strong>{manufacturerToDelete.name}</strong>" (ID: {manufacturerToDelete.id})?
+                        <br />
+                        This action cannot be undone.
+                        </>
+                    }
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                />
             )}
         </Container>
     );
