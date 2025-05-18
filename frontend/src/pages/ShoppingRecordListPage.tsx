@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { getShoppingRecords, deleteShoppingRecord, ShoppingRecord } from '../api/client';
+import ConfirmationDialog from '../components/ConfirmationDialog';
 
 // --- Material UI ---
 import Container from '@mui/material/Container';
@@ -24,6 +25,10 @@ import DeleteIcon from '@mui/icons-material/Delete';
 const ShoppingRecordListPage: React.FC = () => {
     const queryClient = useQueryClient();
 
+    // --- ダイアログの状態管理 ---
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [recordToDelete, setRecordToDelete] = useState<ShoppingRecord | null>(null);
+
     // 購買記録一覧データを取得
     const { data: records, isLoading, isError, error } = useQuery<ShoppingRecord[], Error>({
         queryKey: ['shoppingRecords'],
@@ -31,24 +36,37 @@ const ShoppingRecordListPage: React.FC = () => {
     });
 
     // 削除処理 (useMutation)
-    const { mutate, isPending: isDeleting, variables: deletingId } = useMutation({
+    const { mutate, isPending: isDeleting } = useMutation({
         mutationFn: deleteShoppingRecord,
-        onSuccess: (_, id) => {
-            console.log(`Shopping Record (ID: ${id}) deleted successfully`);
+        onSuccess: (_, deletedRecordId) => {
+            console.log(`Shopping Record (ID: ${deletedRecordId}) deleted successfully`);
             queryClient.invalidateQueries({ queryKey: ['shoppingRecords'] });
+            handleDialogClose();
         },
-        onError: (err, id) => {
-            console.error(`Error deleting shopping record (ID: ${id}):`, err);
-            alert(`Error deleting shopping record: ${err instanceof Error ? err.message : 'Unknown error'}`);
+        onError: (error, deletedRecordId) => {
+            console.error(`Error deleting shopping record (ID: ${deletedRecordId}):`, error);
+            alert(`Error deleting shopping record: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            handleDialogClose();
         },
     });
 
-    // 削除ボタンのクリックハンドラ
-    const handleDelete = (id: number, recordDescription: string) => {
-        // 確認ダイアログを表示
-        if (window.confirm(`Delete record "${recordDescription}" (ID: ${id})?`)) {
-            mutate(id);
+    // --- 削除ボタンクリック時の処理を変更 ---
+    const handleDeleteClick = (record: ShoppingRecord) => {
+        setRecordToDelete(record);
+        setDialogOpen(true);
+    };
+
+    // --- ダイアログの確認ボタン押下時の処理 ---
+    const handleConfirmDelete = () => {
+        if (recordToDelete) {
+        mutate(recordToDelete.id);
         }
+    };
+
+    // --- ダイアログのクローズ処理 ---
+    const handleDialogClose = () => {
+        setDialogOpen(false);
+        setRecordToDelete(null);
     };
 
     if (isLoading) {
@@ -82,6 +100,7 @@ const ShoppingRecordListPage: React.FC = () => {
                     Add New Record
                 </Button>
             </Box>
+
             {(!records || records.length === 0) ? (
                 <Typography>No shopping records found.</Typography>
             ) : (
@@ -111,8 +130,14 @@ const ShoppingRecordListPage: React.FC = () => {
                                         <IconButton component={Link} to={`/shopping-records/${record.id}/edit`} color="primary" aria-label="edit record" size="small">
                                             <EditIcon fontSize="inherit" />
                                         </IconButton>
-                                        <IconButton color="error" aria-label="delete record" size="small" onClick={() => handleDelete(record.id, `${record.product?.name} on ${record.purchase_date}`)} disabled={isDeleting && deletingId === record.id}>
-                                            {isDeleting && deletingId === record.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
+                                        <IconButton
+                                            color="error"
+                                            aria-label="delete record"
+                                            size="small"
+                                            onClick={() => handleDeleteClick(record)} // ★ record オブジェクトを渡す
+                                            disabled={isDeleting && recordToDelete?.id === record.id}
+                                        >
+                                            {isDeleting && recordToDelete?.id === record.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
                                         </IconButton>
                                     </TableCell>
                                 </TableRow>
@@ -120,6 +145,35 @@ const ShoppingRecordListPage: React.FC = () => {
                         </TableBody>
                     </Table>
                 </TableContainer>
+            )}
+
+            {/* ★ 確認ダイアログのレンダリング */}
+            {recordToDelete && (
+                <ConfirmationDialog
+                    open={dialogOpen}
+                    onClose={handleDialogClose}
+                    onConfirm={handleConfirmDelete}
+                    title="Confirm Record Deletion"
+                    message={
+                        <>
+                        Are you sure you want to delete this shopping record?
+                        <br />
+                        <strong>Product:</strong> {recordToDelete.product?.name ?? 'N/A'}
+                        <br />
+                        <strong>Store:</strong> {recordToDelete.store?.name ?? 'N/A'}
+                        <br />
+                        <strong>Date:</strong> {recordToDelete.purchase_date}
+                        <br />
+                        <strong>Price:</strong> {recordToDelete.price}, <strong>Quantity:</strong> {recordToDelete.quantity}
+                        <br />
+                        (ID: {recordToDelete.id})
+                        <br /><br />
+                        This action cannot be undone.
+                        </>
+                    }
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                />
             )}
         </Container>
     );

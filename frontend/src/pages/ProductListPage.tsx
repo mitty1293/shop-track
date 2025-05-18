@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getProducts, deleteProduct } from '../api/client';
+import { getProducts, deleteProduct, Product } from '../api/client';
 import { Link } from 'react-router';
+import ConfirmationDialog from '../components/ConfirmationDialog';
 
 // --- Material UI ---
 import Container from '@mui/material/Container';
@@ -24,6 +25,10 @@ import DeleteIcon from '@mui/icons-material/Delete';
 const ProductListPage: React.FC = () => {
     const queryClient = useQueryClient();
 
+    // --- ダイアログの状態管理 ---
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+
     // --- 商品一覧の取得 (useQuery) ---
     const { data: products, isLoading, isError, error } = useQuery({
         queryKey: ['products'],
@@ -31,27 +36,39 @@ const ProductListPage: React.FC = () => {
     });
 
     // --- 削除処理 (useMutation) ---
-    const { mutate, isPending: isDeleting, variables: deletingId } = useMutation({
+    const { mutate, isPending: isDeleting } = useMutation({
         mutationFn: deleteProduct,
-        onSuccess: (_, id) => {
-            console.log(`商品 (ID: ${id}) の削除成功`);
+        onSuccess: (_, deletedProductId) => {
+            console.log(`商品 (ID: ${deletedProductId}) の削除成功`);
             // 商品一覧のキャッシュを無効化して再取得をトリガー
             queryClient.invalidateQueries({ queryKey: ['products'] });
+            handleDialogClose();
         },
-        onError: (error, id) => {
-            console.error(`商品 (ID: ${id}) の削除エラー:`, error);
+        onError: (error, deletedProductId) => {
+            console.error(`商品 (ID: ${deletedProductId}) の削除エラー:`, error);
             // エラーメッセージを表示 (例: alert)
-            alert(`商品の削除中にエラーが発生しました: ${error.message}`);
+            alert(`Error deleting product: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            handleDialogClose();
         },
     });
 
-    // --- 削除ボタンのクリックハンドラ ---
-    const handleDelete = (id: number, name: string) => {
-        // 確認ダイアログを表示
-        if (window.confirm(`${name}(ID: ${id}) を本当に削除しますか？`)) {
-            // 確認されたら mutate 関数を実行して削除 API を呼び出す
-            mutate(id);
+    // --- 削除ボタンクリック時の処理 ---
+    const handleDeleteClick = (product: Product) => {
+        setProductToDelete(product);
+        setDialogOpen(true);
+    };
+
+    // --- ダイアログの確認ボタン押下時の処理 ---
+    const handleConfirmDelete = () => {
+        if (productToDelete) {
+            mutate(productToDelete.id);
         }
+    };
+
+    // --- ダイアログのクローズ処理 ---
+    const handleDialogClose = () => {
+        setDialogOpen(false);
+        setProductToDelete(null);
     };
 
     if (isLoading) {
@@ -85,7 +102,7 @@ const ProductListPage: React.FC = () => {
                     Add New Product
                 </Button>
             </Box>
-        
+
             {(!products || products.length === 0) ? (
                 <Typography>No products found.</Typography>
             ) : (
@@ -115,8 +132,14 @@ const ProductListPage: React.FC = () => {
                                         <IconButton component={Link} to={`/products/${product.id}/edit`} color="primary" aria-label="edit product" size="small">
                                             <EditIcon fontSize="inherit" />
                                         </IconButton>
-                                        <IconButton color="error" aria-label="delete product" size="small" onClick={() => handleDelete(product.id, product.name)} disabled={isDeleting && deletingId === product.id}>
-                                            {isDeleting && deletingId === product.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
+                                        <IconButton
+                                            color="error"
+                                            aria-label="delete product"
+                                            size="small"
+                                            onClick={() => handleDeleteClick(product)}
+                                            disabled={isDeleting && productToDelete?.id === product.id}
+                                        >
+                                            {isDeleting && productToDelete?.id === product.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
                                         </IconButton>
                                     </TableCell>
                                 </TableRow>
@@ -124,6 +147,28 @@ const ProductListPage: React.FC = () => {
                         </TableBody>
                     </Table>
                 </TableContainer>
+            )}
+
+            {/* ★ 確認ダイアログのレンダリング */}
+            {productToDelete && (
+                <ConfirmationDialog
+                    open={dialogOpen}
+                    onClose={handleDialogClose}
+                    onConfirm={handleConfirmDelete}
+                    title="Confirm Product Deletion"
+                    message={
+                        <>
+                        Are you sure you want to delete the product
+                        "<strong>{productToDelete.name}</strong>" (ID: {productToDelete.id})?
+                        <br />
+                        Category: {productToDelete.category?.name ?? 'N/A'}
+                        <br />
+                        This action cannot be undone.
+                        </>
+                    }
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                />
             )}
         </Container>
     );
