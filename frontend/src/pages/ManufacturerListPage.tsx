@@ -21,9 +21,14 @@ import Box from '@mui/material/Box';             // 汎用レイアウトボッ�
 import IconButton from '@mui/material/IconButton'; // アイコン用ボタン
 import EditIcon from '@mui/icons-material/Edit';   // 編集アイコン
 import DeleteIcon from '@mui/icons-material/Delete'; // 削除アイコン
+import TablePagination from '@mui/material/TablePagination'; // ページネーション
 
 const ManufacturerListPage: React.FC = () => {
     const queryClient = useQueryClient();
+
+    // --- ページネーション用の State ---
+  const [page, setPage] = useState(0); // 現在のページ (0から始まる)
+  const [rowsPerPage, setRowsPerPage] = useState(10); // 1ページあたりの行数 (初期値: 10)
 
     // --- ダイアログの状態管理 ---
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -72,6 +77,16 @@ const ManufacturerListPage: React.FC = () => {
         setManufacturerToDelete(null); // ダイアログを閉じたら削除対象もリセット
     };
 
+    // --- ページネーション用のハンドラ関数 ---
+    const handleChangePage = (event: unknown, newPage: number) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0); // 表示行数を変更したら最初のページに戻る
+    };
+
     if (isLoading) {
         return (
             <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -89,17 +104,21 @@ const ManufacturerListPage: React.FC = () => {
         );
     }
 
+    // 表示するカテゴリをスライス (ページネーションのため)
+    const paginatedManufacturers = manufacturers
+        ? (rowsPerPage === -1 // "All" が選択されたかチェック
+            ? manufacturers // "All" なら元の配列をそのまま使用
+            : manufacturers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage) // それ以外ならスライス
+            )
+        : [];
+
     return (
-        <Container maxWidth="md" sx={{ mt: 2 }}>
+        <Container maxWidth="lg" sx={{ mt: 2 }}>
             <Typography variant="h4" component="h1" gutterBottom>
                 Manufacturers
             </Typography>
             <Box sx={{ mb: 2 }}>
-                <Button
-                    variant="contained"
-                    component={Link}
-                    to="/manufacturers/new"
-                >
+                <Button variant="contained" component={Link} to="/manufacturers/new">
                     Add New Manufacturer
                 </Button>
             </Box>
@@ -107,49 +126,59 @@ const ManufacturerListPage: React.FC = () => {
             {(!manufacturers || manufacturers.length === 0) ? (
                 <Typography>No manufacturers found.</Typography>
             ) : (
-                <TableContainer component={Paper}>
-                    <Table sx={{ minWidth: 650 }} aria-label="manufacturer table">
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>ID</TableCell>
-                                <TableCell>Name</TableCell>
-                                <TableCell align="right">Actions</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {manufacturers.map((manufacturer) => (
-                                <TableRow key={manufacturer.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                                    <TableCell component="th" scope="row">{manufacturer.id}</TableCell>
-                                    <TableCell>{manufacturer.name}</TableCell>
-                                    <TableCell align="right">
-                                        {/* 編集ボタン (IconButton) */}
-                                        <IconButton
-                                            component={Link}
-                                            to={`/manufacturers/${manufacturer.id}/edit`}
-                                            color="primary"
-                                            aria-label="edit manufacturer"
-                                            size="small"
-                                        >
-                                            <EditIcon fontSize="inherit" />
-                                        </IconButton>
-                                        {/* 削除ボタン (IconButton) */}
-                                        <IconButton
-                                            color="error"
-                                            aria-label="delete manufacturer"
-                                            size="small"
-                                            onClick={() => handleDeleteClick(manufacturer)}
-                                            // 削除処理中はボタンを無効化
-                                            disabled={isDeleting && manufacturerToDelete?.id === manufacturer.id}
-                                        >
-                                            {/* 削除処理中はアイコンの代わりにローディング表示 */}
-                                            {isDeleting && manufacturerToDelete?.id === manufacturer.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
-                                        </IconButton>
-                                    </TableCell>
+                <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+                    <TableContainer>
+                        <Table stickyHeader aria-label="manufacturer table">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>ID</TableCell>
+                                    <TableCell>Name</TableCell>
+                                    <TableCell align="right">Actions</TableCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                            </TableHead>
+                            <TableBody>
+                                {paginatedManufacturers.map((manufacturer) => (
+                                    <TableRow hover key={manufacturer.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                                        <TableCell component="th" scope="row">{manufacturer.id}</TableCell>
+                                        <TableCell>{manufacturer.name}</TableCell>
+                                        <TableCell align="right">
+                                             {/* 編集ボタン (IconButton) */}
+                                            <IconButton component={Link} to={`/manufacturers/${manufacturer.id}/edit`} color="primary" aria-label="edit manufacturer" size="small">
+                                                <EditIcon fontSize="inherit" />
+                                            </IconButton>
+                                            {/* 削除ボタン (IconButton) */}
+                                            <IconButton
+                                                color="error" aria-label="delete manufacturer" size="small"
+                                                onClick={() => handleDeleteClick(manufacturer)}
+                                                // 削除処理中はボタンを無効化
+                                                disabled={isDeleting && manufacturerToDelete?.id === manufacturer.id}
+                                            >
+                                                {isDeleting && manufacturerToDelete?.id === manufacturer.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
+                                            </IconButton>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                {/* 空の行を避けるための処理 */}
+                                {paginatedManufacturers.length === 0 && page > 0 && (
+                                    <TableRow style={{ height: 53 * rowsPerPage }}>
+                                        <TableCell colSpan={3} align="center">
+                                            No results found on this page.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                    <TablePagination
+                        rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]} // 表示行数の選択肢
+                        component="div"
+                        count={manufacturers?.length || 0} // 全アイテム数
+                        rowsPerPage={rowsPerPage} // 現在の1ページあたりの行数
+                        page={page} // 現在のページ番号 (0から)
+                        onPageChange={handleChangePage} // ページ変更時のハンドラ
+                        onRowsPerPageChange={handleChangeRowsPerPage} // 表示行数変更時のハンドラ
+                    />
+                </Paper>
             )}
             {manufacturerToDelete && ( // manufacturerToDelete がある場合のみダイアログを意味のあるものとしてレンダリング
                 <ConfirmationDialog
