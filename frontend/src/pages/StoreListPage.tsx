@@ -21,9 +21,14 @@ import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import TablePagination from '@mui/material/TablePagination'; // ページネーション
 
 const StoreListPage: React.FC = () => {
     const queryClient = useQueryClient();
+
+     // --- ページネーション用の State ---
+    const [page, setPage] = useState(0); // 現在のページ (0から始まる)
+    const [rowsPerPage, setRowsPerPage] = useState(10); // 1ページあたりの行数
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
@@ -66,6 +71,16 @@ const StoreListPage: React.FC = () => {
         setStoreToDelete(null);
     };
 
+    // --- ページネーション用のハンドラ関数 ---
+    const handleChangePage = (event: unknown, newPage: number) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
+
     if (isLoading) {
         return (
             <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -83,17 +98,21 @@ const StoreListPage: React.FC = () => {
         );
     }
 
+    // 表示する店舗データをスライス (ページネーションのため)
+    const paginatedStores = stores
+        ? (rowsPerPage === -1
+            ? stores // "All" が選択されたら全件表示
+            : stores.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+            )
+        : [];
+
     return (
         <Container maxWidth="lg" sx={{ mt: 2 }}>
             <Typography variant="h4" component="h1" gutterBottom>
                 Stores
             </Typography>
             <Box sx={{ mb: 2 }}>
-                <Button
-                    variant="contained"
-                    component={Link}
-                    to="/stores/new"
-                >
+                <Button variant="contained" component={Link} to="/stores/new">
                     Add New Store
                 </Button>
             </Box>
@@ -101,41 +120,57 @@ const StoreListPage: React.FC = () => {
             {(!stores || stores.length === 0) ? (
                 <Typography>No stores found.</Typography>
             ) : (
-                <TableContainer component={Paper}>
-                    <Table sx={{ minWidth: 650 }} aria-label="store table">
-                        <TableHead>
-                        <TableRow>
-                            <TableCell>ID</TableCell>
-                            <TableCell>Name</TableCell>
-                            <TableCell>Location</TableCell>
-                            <TableCell align="right">Actions</TableCell>
-                        </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {stores.map((store) => (
-                                <TableRow key={store.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                                    <TableCell component="th" scope="row">{store.id}</TableCell>
-                                    <TableCell>{store.name}</TableCell>
-                                    <TableCell>{store.location}</TableCell>
-                                    <TableCell align="right">
-                                        <IconButton component={Link} to={`/stores/${store.id}/edit`} color="primary" aria-label="edit store" size="small">
-                                            <EditIcon fontSize="inherit" />
-                                        </IconButton>
-                                        <IconButton
-                                            color="error"
-                                            aria-label="delete store"
-                                            size="small"
-                                            onClick={() => handleDeleteClick(store)}
-                                            disabled={isDeleting && storeToDelete?.id === store.id}
-                                        >
-                                            {isDeleting && storeToDelete?.id === store.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
-                                        </IconButton>
-                                    </TableCell>
+                <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+                    <TableContainer>
+                        <Table stickyHeader aria-label="store table">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>ID</TableCell>
+                                    <TableCell>Name</TableCell>
+                                    <TableCell>Location</TableCell>
+                                    <TableCell align="right">Actions</TableCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                </Table>
-                </TableContainer>
+                            </TableHead>
+                            <TableBody>
+                                {paginatedStores.map((store) => (
+                                    <TableRow hover key={store.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                                        <TableCell component="th" scope="row">{store.id}</TableCell>
+                                        <TableCell>{store.name}</TableCell>
+                                        <TableCell>{store.location}</TableCell>
+                                        <TableCell align="right">
+                                            <IconButton component={Link} to={`/stores/${store.id}/edit`} color="primary" aria-label="edit store" size="small">
+                                                <EditIcon fontSize="inherit" />
+                                            </IconButton>
+                                            <IconButton
+                                                color="error" aria-label="delete store" size="small"
+                                                onClick={() => handleDeleteClick(store)}
+                                                disabled={isDeleting && storeToDelete?.id === store.id}
+                                            >
+                                                {isDeleting && storeToDelete?.id === store.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
+                                            </IconButton>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                {paginatedStores.length === 0 && page > 0 && (
+                                    <TableRow style={{ height: 53 * (rowsPerPage > 0 ? rowsPerPage : 1) }}> {/* rowsPerPageが-1の場合を考慮 */}
+                                        <TableCell colSpan={4} align="center"> {/* colSpanを調整 */}
+                                            No results found on this page.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                    <TablePagination
+                        rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
+                        component="div"
+                        count={stores?.length || 0}
+                        rowsPerPage={rowsPerPage}
+                        page={page}
+                        onPageChange={handleChangePage}
+                        onRowsPerPageChange={handleChangeRowsPerPage}
+                    />
+                </Paper>
             )}
 
             {/* ★ 確認ダイアログのレンダリング */}

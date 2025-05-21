@@ -21,9 +21,14 @@ import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import TablePagination from '@mui/material/TablePagination';
 
 const ShoppingRecordListPage: React.FC = () => {
     const queryClient = useQueryClient();
+
+    // --- ★ ページネーション用の State ---
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
 
     // --- ダイアログの状態管理 ---
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -69,6 +74,16 @@ const ShoppingRecordListPage: React.FC = () => {
         setRecordToDelete(null);
     };
 
+    // --- ページネーション用のハンドラ関数 ---
+    const handleChangePage = (event: unknown, newPage: number) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0); // 表示行数を変更したら最初のページに戻る
+    };
+
     if (isLoading) {
         return (
             <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -85,6 +100,14 @@ const ShoppingRecordListPage: React.FC = () => {
             </Container>
         );
     }
+
+    // 表示する購買記録データをスライス
+    const paginatedRecords = records
+        ? (rowsPerPage === -1
+            ? records
+            : records.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+        )
+        : [];
 
     return (
         <Container maxWidth="lg" sx={{ mt: 2 }}>
@@ -104,47 +127,63 @@ const ShoppingRecordListPage: React.FC = () => {
             {(!records || records.length === 0) ? (
                 <Typography>No shopping records found.</Typography>
             ) : (
-                <TableContainer component={Paper}>
-                    <Table sx={{ minWidth: 750 }} aria-label="shopping record table">
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>ID</TableCell>
-                                <TableCell>Product</TableCell>
-                                <TableCell>Store</TableCell>
-                                <TableCell>Purchase Date</TableCell>
-                                <TableCell align="right">Price</TableCell>
-                                <TableCell align="right">Quantity</TableCell>
-                                <TableCell align="right">Actions</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {records.map((record) => (
-                                <TableRow key={record.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                                    <TableCell component="th" scope="row">{record.id}</TableCell>
-                                    <TableCell>{record.product?.name ?? 'N/A'}</TableCell>
-                                    <TableCell>{record.store?.name ?? 'N/A'}</TableCell>
-                                    <TableCell>{record.purchase_date}</TableCell>
-                                    <TableCell align="right">{record.price}</TableCell>
-                                    <TableCell align="right">{record.quantity} {record.product?.unit?.name ?? ''}</TableCell>
-                                    <TableCell align="right">
-                                        <IconButton component={Link} to={`/shopping-records/${record.id}/edit`} color="primary" aria-label="edit record" size="small">
-                                            <EditIcon fontSize="inherit" />
-                                        </IconButton>
-                                        <IconButton
-                                            color="error"
-                                            aria-label="delete record"
-                                            size="small"
-                                            onClick={() => handleDeleteClick(record)} // ★ record オブジェクトを渡す
-                                            disabled={isDeleting && recordToDelete?.id === record.id}
-                                        >
-                                            {isDeleting && recordToDelete?.id === record.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
-                                        </IconButton>
-                                    </TableCell>
+                <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+                    <TableContainer>
+                        <Table stickyHeader aria-label="shopping record table">
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>ID</TableCell>
+                                    <TableCell>Product</TableCell>
+                                    <TableCell>Store</TableCell>
+                                    <TableCell>Purchase Date</TableCell>
+                                    <TableCell align="right">Price</TableCell>
+                                    <TableCell align="right">Quantity</TableCell>
+                                    <TableCell align="right">Actions</TableCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
+                            </TableHead>
+                            <TableBody>
+                                {paginatedRecords.map((record) => (
+                                    <TableRow hover key={record.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                                        <TableCell component="th" scope="row">{record.id}</TableCell>
+                                        <TableCell>{record.product?.name ?? 'N/A'}</TableCell>
+                                        <TableCell>{record.store?.name ?? 'N/A'}</TableCell>
+                                        <TableCell>{record.purchase_date}</TableCell>
+                                        <TableCell align="right">{record.price}</TableCell>
+                                        <TableCell align="right">{record.quantity} {record.product?.unit?.name ?? ''}</TableCell>
+                                        <TableCell align="right">
+                                            <IconButton component={Link} to={`/shopping-records/${record.id}/edit`} color="primary" aria-label="edit record" size="small">
+                                                <EditIcon fontSize="inherit" />
+                                            </IconButton>
+                                            <IconButton
+                                                color="error" aria-label="delete record" size="small"
+                                                onClick={() => handleDeleteClick(record)}
+                                                disabled={isDeleting && recordToDelete?.id === record.id}
+                                            >
+                                                {isDeleting && recordToDelete?.id === record.id ? <CircularProgress size={20} color="inherit"/> : <DeleteIcon fontSize="inherit"/>}
+                                            </IconButton>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                {paginatedRecords.length === 0 && page > 0 && (
+                                    <TableRow style={{ height: 53 * (rowsPerPage > 0 ? rowsPerPage : 1) }}>
+                                        <TableCell colSpan={7} align="center">
+                                            No results found on this page.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                    <TablePagination
+                        rowsPerPageOptions={[5, 10, 25, 50, { label: 'All', value: -1 }]}
+                        component="div"
+                        count={records?.length || 0}
+                        rowsPerPage={rowsPerPage}
+                        page={page}
+                        onPageChange={handleChangePage}
+                        onRowsPerPageChange={handleChangeRowsPerPage}
+                    />
+                </Paper>
             )}
 
             {/* ★ 確認ダイアログのレンダリング */}
