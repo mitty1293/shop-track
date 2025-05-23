@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { getUnits, deleteUnit, Unit } from '../api/client';
@@ -22,13 +22,17 @@ import IconButton from '@mui/material/IconButton'; // アイコン用ボタン
 import EditIcon from '@mui/icons-material/Edit';   // 編集アイコン
 import DeleteIcon from '@mui/icons-material/Delete'; // 削除アイコン
 import TablePagination from '@mui/material/TablePagination'; // ページネーション
+import TextField from '@mui/material/TextField'; // フィルタリング入力用
 
 const UnitListPage: React.FC = () => {
     const queryClient = useQueryClient();
 
     // --- ページネーション用の State ---
-  const [page, setPage] = useState(0); // 現在のページ (0から始まる)
-  const [rowsPerPage, setRowsPerPage] = useState(10); // 1ページあたりの行数 (初期値: 10)
+    const [page, setPage] = useState(0); // 現在のページ (0から始まる)
+    const [rowsPerPage, setRowsPerPage] = useState(10); // 1ページあたりの行数 (初期値: 10)
+
+    // --- フィルタリング用の State ---
+    const [filterName, setFilterName] = useState(''); // カテゴリ名フィルターの入力値
 
     // --- ダイアログの状態管理 ---
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -57,6 +61,15 @@ const UnitListPage: React.FC = () => {
             setUnitToDelete(null);
         },
     });
+
+    // --- フィルタリングされたカテゴリリスト (useMemoで計算) ---
+    const filteredUnits = useMemo(() => {
+        if (!units) return [];
+        if (!filterName) return units; // フィルターが空なら全件返す
+        return units.filter(unit =>
+            unit.name.toLowerCase().includes(filterName.toLowerCase()) // 大文字・小文字を区別しない部分一致
+        );
+    }, [units, filterName]); // units または filterName が変更された時のみ再計算
 
     // --- 削除ボタンクリック時の処理 ---
     const handleDeleteClick = (unit: Unit) => {
@@ -87,6 +100,12 @@ const UnitListPage: React.FC = () => {
         setPage(0); // 表示行数を変更したら最初のページに戻る
     };
 
+    // --- フィルター入力変更ハンドラ ---
+    const handleFilterNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setFilterName(event.target.value);
+        setPage(0); // フィルター変更時は1ページ目に戻す
+    };
+
     if (isLoading) {
         return (
             <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -105,26 +124,33 @@ const UnitListPage: React.FC = () => {
     }
 
     // 表示するカテゴリをスライス (ページネーションのため)
-    const paginatedUnits = units
+    const paginatedUnits = filteredUnits
         ? (rowsPerPage === -1 // "All" が選択されたかチェック
-            ? units // "All" なら元の配列をそのまま使用
-            : units.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage) // それ以外ならスライス
+            ? filteredUnits // "All" なら元の配列をそのまま使用
+            : filteredUnits.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage) // それ以外ならスライス
             )
         : [];
 
     return (
         <Container maxWidth="lg" sx={{ mt: 2 }}>
-            <Typography variant="h4" component="h1" gutterBottom>
-                Units
-            </Typography>
-            <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <TextField
+                    label="Filter by Name"
+                    variant="outlined"
+                    size="small"
+                    value={filterName}
+                    onChange={handleFilterNameChange}
+                    sx={{ width: '300px' }}
+                />
                 <Button variant="contained" component={Link} to="/units/new">
                     Add New Unit
                 </Button>
             </Box>
 
-            {(!units || units.length === 0) ? (
-                <Typography>No units found.</Typography>
+            {(!units) ? (
+                <Typography>Loading data or no units available.</Typography>
+            ) : (!filteredUnits || filteredUnits.length === 0) ? (
+                <Typography>No units match your filter criteria "{filterName}".</Typography>
             ) : (
                 <Paper sx={{ width: '100%', overflow: 'hidden' }}>
                     <TableContainer>
@@ -172,7 +198,7 @@ const UnitListPage: React.FC = () => {
                     <TablePagination
                         rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]} // 表示行数の選択肢
                         component="div"
-                        count={units?.length || 0} // 全アイテム数
+                        count={filteredUnits.length || 0}
                         rowsPerPage={rowsPerPage} // 現在の1ページあたりの行数
                         page={page} // 現在のページ番号 (0から)
                         onPageChange={handleChangePage} // ページ変更時のハンドラ

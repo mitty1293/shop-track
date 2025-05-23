@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { getCategories, deleteCategory, Category } from '../api/client';
@@ -22,13 +22,17 @@ import IconButton from '@mui/material/IconButton'; // アイコン用ボタン
 import EditIcon from '@mui/icons-material/Edit';   // 編集アイコン
 import DeleteIcon from '@mui/icons-material/Delete'; // 削除アイコン
 import TablePagination from '@mui/material/TablePagination'; // ページネーション
+import TextField from '@mui/material/TextField'; // フィルタリング入力用
 
 const CategoryListPage: React.FC = () => {
     const queryClient = useQueryClient();
 
     // --- ページネーション用の State ---
-  const [page, setPage] = useState(0); // 現在のページ (0から始まる)
-  const [rowsPerPage, setRowsPerPage] = useState(10); // 1ページあたりの行数 (初期値: 10)
+    const [page, setPage] = useState(0); // 現在のページ (0から始まる)
+    const [rowsPerPage, setRowsPerPage] = useState(10); // 1ページあたりの行数 (初期値: 10)
+
+    // --- フィルタリング用の State ---
+    const [filterName, setFilterName] = useState(''); // カテゴリ名フィルターの入力値
 
     // --- ダイアログの状態管理 ---
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -57,6 +61,15 @@ const CategoryListPage: React.FC = () => {
             setCategoryToDelete(null);
         },
     });
+
+    // --- フィルタリングされたカテゴリリスト (useMemoで計算) ---
+    const filteredCategories = useMemo(() => {
+        if (!categories) return [];
+        if (!filterName) return categories; // フィルターが空なら全件返す
+        return categories.filter(category =>
+            category.name.toLowerCase().includes(filterName.toLowerCase()) // 大文字・小文字を区別しない部分一致
+        );
+    }, [categories, filterName]); // categories または filterName が変更された時のみ再計算
 
     // --- 削除ボタンクリック時の処理 ---
     const handleDeleteClick = (category: Category) => {
@@ -87,6 +100,12 @@ const CategoryListPage: React.FC = () => {
         setPage(0); // 表示行数を変更したら最初のページに戻る
     };
 
+    // --- フィルター入力変更ハンドラ ---
+    const handleFilterNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setFilterName(event.target.value);
+        setPage(0); // フィルター変更時は1ページ目に戻す
+    };
+
     if (isLoading) {
         return (
             <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -105,26 +124,33 @@ const CategoryListPage: React.FC = () => {
     }
 
     // 表示するカテゴリをスライス (ページネーションのため)
-    const paginatedCategories = categories
+    const paginatedCategories = filteredCategories
         ? (rowsPerPage === -1 // "All" が選択されたかチェック
-            ? categories // "All" なら元の配列をそのまま使用
-            : categories.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage) // それ以外ならスライス
+            ? filteredCategories // "All" なら元の配列をそのまま使用
+            : filteredCategories.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage) // それ以外ならスライス
             )
         : [];
 
     return (
         <Container maxWidth="lg" sx={{ mt: 2 }}>
-            <Typography variant="h4" component="h1" gutterBottom>
-                Categories
-            </Typography>
-            <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <TextField
+                    label="Filter by Name"
+                    variant="outlined"
+                    size="small"
+                    value={filterName}
+                    onChange={handleFilterNameChange}
+                    sx={{ width: '300px' }}
+                />
                 <Button variant="contained" component={Link} to="/categories/new">
                     Add New Category
                 </Button>
             </Box>
 
-            {(!categories || categories.length === 0) ? (
-                <Typography>No categories found.</Typography>
+            {(!categories) ? (
+                <Typography>Loading data or no categories available.</Typography>
+            ) : (!filteredCategories || filteredCategories.length === 0) ? (
+                <Typography>No categories match your filter criteria "{filterName}".</Typography>
             ) : (
                 <Paper sx={{ width: '100%', overflow: 'hidden' }}>
                     <TableContainer>
@@ -172,7 +198,7 @@ const CategoryListPage: React.FC = () => {
                     <TablePagination
                         rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]} // 表示行数の選択肢
                         component="div"
-                        count={categories?.length || 0} // 全アイテム数
+                        count={filteredCategories.length || 0}
                         rowsPerPage={rowsPerPage} // 現在の1ページあたりの行数
                         page={page} // 現在のページ番号 (0から)
                         onPageChange={handleChangePage} // ページ変更時のハンドラ
