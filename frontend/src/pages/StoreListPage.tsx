@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { getStores, deleteStore, Store } from '../api/client';
@@ -22,6 +22,7 @@ import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TablePagination from '@mui/material/TablePagination'; // ページネーション
+import TextField from '@mui/material/TextField';
 
 const StoreListPage: React.FC = () => {
     const queryClient = useQueryClient();
@@ -29,6 +30,9 @@ const StoreListPage: React.FC = () => {
      // --- ページネーション用の State ---
     const [page, setPage] = useState(0); // 現在のページ (0から始まる)
     const [rowsPerPage, setRowsPerPage] = useState(10); // 1ページあたりの行数
+
+    // --- ★ フィルタリング用 State ---
+    const [filterName, setFilterName] = useState('');
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
@@ -51,6 +55,15 @@ const StoreListPage: React.FC = () => {
             handleDialogClose();
         },
     });
+
+    // --- フィルタリングされた店舗リスト (useMemoで計算) ---
+  const filteredStores = useMemo(() => {
+        if (!stores) return [];
+        if (!filterName) return stores; // フィルターが空なら全件返す
+        return stores.filter(store =>
+            store.name.toLowerCase().includes(filterName.toLowerCase()) // nameで部分一致
+        );
+    }, [stores, filterName]); // stores または filterName が変更された時のみ再計算
 
     // --- 削除ボタンクリック時の処理を変更 ---
     const handleDeleteClick = (store: Store) => {
@@ -81,6 +94,12 @@ const StoreListPage: React.FC = () => {
         setPage(0);
     };
 
+    // --- フィルター入力変更ハンドラ ---
+    const handleFilterNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setFilterName(event.target.value);
+        setPage(0); // フィルター変更時は1ページ目に戻す
+    };
+
     if (isLoading) {
         return (
             <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -99,10 +118,10 @@ const StoreListPage: React.FC = () => {
     }
 
     // 表示する店舗データをスライス (ページネーションのため)
-    const paginatedStores = stores
+    const paginatedStores = filteredStores
         ? (rowsPerPage === -1
-            ? stores // "All" が選択されたら全件表示
-            : stores.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+            ? filteredStores // "All" が選択されたら全件表示
+            : filteredStores.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
             )
         : [];
 
@@ -111,14 +130,24 @@ const StoreListPage: React.FC = () => {
             <Typography variant="h4" component="h1" gutterBottom>
                 Stores
             </Typography>
-            <Box sx={{ mb: 2 }}>
-                <Button variant="contained" component={Link} to="/stores/new">
-                    Add New Store
-                </Button>
-            </Box>
+             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <TextField
+                label="Filter by Name"
+                variant="outlined"
+                size="small"
+                value={filterName}
+                onChange={handleFilterNameChange}
+                sx={{ width: '300px' }}
+            />
+            <Button variant="contained" component={Link} to="/stores/new">
+                Add New Store
+            </Button>
+        </Box>
 
-            {(!stores || stores.length === 0) ? (
-                <Typography>No stores found.</Typography>
+            {(!stores) ? (
+                <Typography>Loading data or no stores available.</Typography>
+            ) : (!filteredStores || filteredStores.length === 0) ? (
+                <Typography>No stores match your filter criteria "{filterName}".</Typography>
             ) : (
                 <Paper sx={{ width: '100%', overflow: 'hidden' }}>
                     <TableContainer>
@@ -152,8 +181,8 @@ const StoreListPage: React.FC = () => {
                                     </TableRow>
                                 ))}
                                 {paginatedStores.length === 0 && page > 0 && (
-                                    <TableRow style={{ height: 53 * (rowsPerPage > 0 ? rowsPerPage : 1) }}> {/* rowsPerPageが-1の場合を考慮 */}
-                                        <TableCell colSpan={4} align="center"> {/* colSpanを調整 */}
+                                    <TableRow style={{ height: 53 * (rowsPerPage > 0 ? rowsPerPage : 1) }}>
+                                        <TableCell colSpan={4} align="center">
                                             No results found on this page.
                                         </TableCell>
                                     </TableRow>
@@ -164,7 +193,7 @@ const StoreListPage: React.FC = () => {
                     <TablePagination
                         rowsPerPageOptions={[5, 10, 25, { label: 'All', value: -1 }]}
                         component="div"
-                        count={stores?.length || 0}
+                        count={filteredStores?.length || 0}
                         rowsPerPage={rowsPerPage}
                         page={page}
                         onPageChange={handleChangePage}

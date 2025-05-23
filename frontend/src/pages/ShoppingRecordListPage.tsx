@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { getShoppingRecords, deleteShoppingRecord, ShoppingRecord } from '../api/client';
@@ -22,13 +22,17 @@ import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TablePagination from '@mui/material/TablePagination';
+import TextField from '@mui/material/TextField';
 
 const ShoppingRecordListPage: React.FC = () => {
     const queryClient = useQueryClient();
 
-    // --- ★ ページネーション用の State ---
+    // --- ページネーション用の State ---
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+
+    // --- フィルタリング用 State ---
+    const [filterProductName, setFilterProductName] = useState(''); // 商品名フィルター
 
     // --- ダイアログの状態管理 ---
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -54,6 +58,15 @@ const ShoppingRecordListPage: React.FC = () => {
             handleDialogClose();
         },
     });
+
+    // --- フィルタリングされた購買記録リスト (useMemoで計算) ---
+    const filteredRecords = useMemo(() => {
+        if (!records) return [];
+        if (!filterProductName) return records; // フィルターが空なら全件返す
+        return records.filter(record =>
+            record.product?.name.toLowerCase().includes(filterProductName.toLowerCase())
+        );
+    }, [records, filterProductName]); // records または filterProductName が変更された時のみ再計算
 
     // --- 削除ボタンクリック時の処理を変更 ---
     const handleDeleteClick = (record: ShoppingRecord) => {
@@ -84,6 +97,12 @@ const ShoppingRecordListPage: React.FC = () => {
         setPage(0); // 表示行数を変更したら最初のページに戻る
     };
 
+    // --- フィルター入力変更ハンドラ ---
+    const handleFilterProductNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setFilterProductName(event.target.value);
+        setPage(0); // フィルター変更時は1ページ目に戻す
+    };
+
     if (isLoading) {
         return (
             <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -102,10 +121,10 @@ const ShoppingRecordListPage: React.FC = () => {
     }
 
     // 表示する購買記録データをスライス
-    const paginatedRecords = records
+    const paginatedRecords = filteredRecords
         ? (rowsPerPage === -1
-            ? records
-            : records.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+            ? filteredRecords
+            : filteredRecords.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
         )
         : [];
 
@@ -114,18 +133,24 @@ const ShoppingRecordListPage: React.FC = () => {
             <Typography variant="h4" component="h1" gutterBottom>
                 Shopping Records
             </Typography>
-            <Box sx={{ mb: 2 }}>
-                <Button
-                    variant="contained"
-                    component={Link}
-                    to="/shopping-records/new"
-                >
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <TextField
+                    label="Filter by Product Name"
+                    variant="outlined"
+                    size="small"
+                    value={filterProductName}
+                    onChange={handleFilterProductNameChange}
+                    sx={{ width: '300px' }}
+                />
+                <Button variant="contained" component={Link} to="/shopping-records/new">
                     Add New Record
                 </Button>
             </Box>
 
-            {(!records || records.length === 0) ? (
-                <Typography>No shopping records found.</Typography>
+            {(!records) ? (
+                <Typography>Loading data or no records available.</Typography>
+            ) : (!filteredRecords || filteredRecords.length === 0) ? (
+                <Typography>No records match your filter criteria for product name "{filterProductName}".</Typography>
             ) : (
                 <Paper sx={{ width: '100%', overflow: 'hidden' }}>
                     <TableContainer>
@@ -177,7 +202,7 @@ const ShoppingRecordListPage: React.FC = () => {
                     <TablePagination
                         rowsPerPageOptions={[5, 10, 25, 50, { label: 'All', value: -1 }]}
                         component="div"
-                        count={records?.length || 0}
+                        count={filteredRecords?.length || 0}
                         rowsPerPage={rowsPerPage}
                         page={page}
                         onPageChange={handleChangePage}
@@ -195,19 +220,19 @@ const ShoppingRecordListPage: React.FC = () => {
                     title="Confirm Record Deletion"
                     message={
                         <>
-                        Are you sure you want to delete this shopping record?
-                        <br />
-                        <strong>Product:</strong> {recordToDelete.product?.name ?? 'N/A'}
-                        <br />
-                        <strong>Store:</strong> {recordToDelete.store?.name ?? 'N/A'}
-                        <br />
-                        <strong>Date:</strong> {recordToDelete.purchase_date}
-                        <br />
-                        <strong>Price:</strong> {recordToDelete.price}, <strong>Quantity:</strong> {recordToDelete.quantity}
-                        <br />
-                        (ID: {recordToDelete.id})
-                        <br /><br />
-                        This action cannot be undone.
+                            Are you sure you want to delete this shopping record?
+                            <br />
+                            <strong>Product:</strong> {recordToDelete.product?.name ?? 'N/A'}
+                            <br />
+                            <strong>Store:</strong> {recordToDelete.store?.name ?? 'N/A'}
+                            <br />
+                            <strong>Date:</strong> {recordToDelete.purchase_date}
+                            <br />
+                            <strong>Price:</strong> {recordToDelete.price}, <strong>Quantity:</strong> {recordToDelete.quantity}
+                            <br />
+                            (ID: {recordToDelete.id})
+                            <br /><br />
+                            This action cannot be undone.
                         </>
                     }
                     confirmText="Delete"

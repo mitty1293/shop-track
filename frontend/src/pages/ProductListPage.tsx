@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getProducts, deleteProduct, Product } from '../api/client';
 import { Link } from 'react-router';
@@ -22,6 +22,7 @@ import IconButton from '@mui/material/IconButton';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TablePagination from '@mui/material/TablePagination';
+import TextField from '@mui/material/TextField';
 
 const ProductListPage: React.FC = () => {
     const queryClient = useQueryClient();
@@ -29,6 +30,9 @@ const ProductListPage: React.FC = () => {
     // --- ページネーション用の State ---
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+
+    // --- フィルタリング用 State ---
+    const [filterName, setFilterName] = useState(''); // 商品名フィルターの入力値
 
     // --- ダイアログの状態管理 ---
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -56,6 +60,15 @@ const ProductListPage: React.FC = () => {
             handleDialogClose();
         },
     });
+
+    // --- フィルタリングされた商品リスト (useMemoで計算) ---
+    const filteredProducts = useMemo(() => {
+        if (!products) return [];
+        if (!filterName) return products; // フィルターが空なら全件返す
+        return products.filter(product =>
+            product.name.toLowerCase().includes(filterName.toLowerCase()) // nameで部分一致
+        );
+    }, [products, filterName]); // products または filterName が変更された時のみ再計算
 
     // --- 削除ボタンクリック時の処理 ---
     const handleDeleteClick = (product: Product) => {
@@ -86,6 +99,12 @@ const ProductListPage: React.FC = () => {
         setPage(0);
     };
 
+    // --- フィルター入力変更ハンドラ ---
+    const handleFilterNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setFilterName(event.target.value);
+        setPage(0); // フィルター変更時は1ページ目に戻す
+    };
+
     if (isLoading) {
         return (
             <Container maxWidth="sm" sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -104,10 +123,10 @@ const ProductListPage: React.FC = () => {
     }
 
     // 表示する商品データをスライス
-    const paginatedProducts = products
+    const paginatedProducts = filteredProducts
         ? (rowsPerPage === -1
-            ? products
-            : products.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+            ? filteredProducts
+            : filteredProducts.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
         )
         : [];
 
@@ -116,14 +135,24 @@ const ProductListPage: React.FC = () => {
             <Typography variant="h4" component="h1" gutterBottom>
                 Products
             </Typography>
-            <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <TextField
+                    label="Filter by Name"
+                    variant="outlined"
+                    size="small"
+                    value={filterName}
+                    onChange={handleFilterNameChange}
+                    sx={{ width: '300px' }}
+                />
                 <Button variant="contained" component={Link} to="/products/new">
                     Add New Product
                 </Button>
             </Box>
 
-            {(!products || products.length === 0) ? (
-                <Typography>No products found.</Typography>
+            {(!products) ? (
+                <Typography>Loading data or no products available.</Typography>
+            ) : (!filteredProducts || filteredProducts.length === 0) ? ( // ★ フィルター結果がない場合
+                <Typography>No products match your filter criteria "{filterName}".</Typography>
             ) : (
                 <Paper sx={{ width: '100%', overflow: 'hidden' }}>
                     <TableContainer>
@@ -175,7 +204,7 @@ const ProductListPage: React.FC = () => {
                     <TablePagination
                         rowsPerPageOptions={[5, 10, 25, 50, { label: 'All', value: -1 }]} // 表示行数の選択肢を増やすなど調整
                         component="div"
-                        count={products?.length || 0} // 全アイテム数
+                        count={filteredProducts?.length || 0}
                         rowsPerPage={rowsPerPage}
                         page={page}
                         onPageChange={handleChangePage}
