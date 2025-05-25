@@ -23,6 +23,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TablePagination from '@mui/material/TablePagination';
 import TextField from '@mui/material/TextField';
+import Stack from '@mui/material/Stack';
 
 const ProductListPage: React.FC = () => {
     const queryClient = useQueryClient();
@@ -32,7 +33,11 @@ const ProductListPage: React.FC = () => {
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
     // --- フィルタリング用 State ---
-    const [filterName, setFilterName] = useState(''); // 商品名フィルターの入力値
+    const [filterName, setFilterName] = useState('');
+    const [filterCategory, setFilterCategory] = useState('');
+    const [filterUnit, setFilterUnit] = useState('');
+    const [filterManufacturer, setFilterManufacturer] = useState('');
+    const [filterOrigin, setFilterOrigin] = useState('');
 
     // --- ダイアログの状態管理 ---
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -64,11 +69,15 @@ const ProductListPage: React.FC = () => {
     // --- フィルタリングされた商品リスト (useMemoで計算) ---
     const filteredProducts = useMemo(() => {
         if (!products) return [];
-        if (!filterName) return products; // フィルターが空なら全件返す
-        return products.filter(product =>
-            product.name.toLowerCase().includes(filterName.toLowerCase()) // nameで部分一致
-        );
-    }, [products, filterName]); // products または filterName が変更された時のみ再計算
+        return products.filter(product => {
+            const nameMatch = filterName ? product.name.toLowerCase().includes(filterName.toLowerCase()) : true;
+            const categoryMatch = filterCategory ? product.category?.name.toLowerCase().includes(filterCategory.toLowerCase()) : true;
+            const unitMatch = filterUnit ? product.unit?.name.toLowerCase().includes(filterUnit.toLowerCase()) : true;
+            const manufacturerMatch = filterManufacturer ? product.manufacturer?.name.toLowerCase().includes(filterManufacturer.toLowerCase()) : true;
+            const originMatch = filterOrigin ? product.origin?.name.toLowerCase().includes(filterOrigin.toLowerCase()) : true;
+            return nameMatch && categoryMatch && unitMatch && manufacturerMatch && originMatch;
+        });
+    }, [products, filterName, filterCategory, filterUnit, filterManufacturer, filterOrigin]);
 
     // --- 削除ボタンクリック時の処理 ---
     const handleDeleteClick = (product: Product) => {
@@ -99,11 +108,18 @@ const ProductListPage: React.FC = () => {
         setPage(0);
     };
 
-    // --- フィルター入力変更ハンドラ ---
-    const handleFilterNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setFilterName(event.target.value);
+    // --- 汎用フィルター入力変更ハンドラ ---
+    const createFilterHandleChange = (setter: React.Dispatch<React.SetStateAction<string>>) =>
+        (event: React.ChangeEvent<HTMLInputElement>) => {
+        setter(event.target.value);
         setPage(0); // フィルター変更時は1ページ目に戻す
     };
+
+    const handleFilterNameChange = createFilterHandleChange(setFilterName);
+    const handleFilterCategoryChange = createFilterHandleChange(setFilterCategory);
+    const handleFilterUnitChange = createFilterHandleChange(setFilterUnit);
+    const handleFilterManufacturerChange = createFilterHandleChange(setFilterManufacturer);
+    const handleFilterOriginChange = createFilterHandleChange(setFilterOrigin);
 
     if (isLoading) {
         return (
@@ -135,24 +151,43 @@ const ProductListPage: React.FC = () => {
             <Typography variant="h4" component="h1" gutterBottom>
                 Products
             </Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <TextField
-                    label="Filter by Name"
-                    variant="outlined"
-                    size="small"
-                    value={filterName}
-                    onChange={handleFilterNameChange}
-                    sx={{ width: '300px' }}
-                />
-                <Button variant="contained" component={Link} to="/products/new">
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, gap: 2 }}>
+                <Stack spacing={1} sx={{ width: 'calc(100% - 220px)'}}>
+                    <TextField
+                        label="Filter by Product Name"
+                        variant="outlined" size="small" fullWidth
+                        value={filterName} onChange={handleFilterNameChange}
+                    />
+                    <TextField
+                        label="Filter by Category Name"
+                        variant="outlined" size="small" fullWidth
+                        value={filterCategory} onChange={handleFilterCategoryChange}
+                    />
+                    <TextField
+                        label="Filter by Unit Name"
+                        variant="outlined" size="small" fullWidth
+                        value={filterUnit} onChange={handleFilterUnitChange}
+                    />
+                    <TextField
+                        label="Filter by Manufacturer Name"
+                        variant="outlined" size="small" fullWidth
+                        value={filterManufacturer} onChange={handleFilterManufacturerChange}
+                    />
+                    <TextField
+                        label="Filter by Origin Name"
+                        variant="outlined" size="small" fullWidth
+                        value={filterOrigin} onChange={handleFilterOriginChange}
+                    />
+                </Stack>
+                <Button variant="contained" component={Link} to="/products/new" sx={{ height: 'fit-content', mt:'8px' }}>
                     Add New Product
                 </Button>
             </Box>
 
             {(!products) ? (
                 <Typography>Loading data or no products available.</Typography>
-            ) : (!filteredProducts || filteredProducts.length === 0) ? ( // ★ フィルター結果がない場合
-                <Typography>No products match your filter criteria "{filterName}".</Typography>
+            ) : (!filteredProducts || filteredProducts.length === 0) ? (
+                <Typography>No products match your filter criteria.</Typography>
             ) : (
                 <Paper sx={{ width: '100%', overflow: 'hidden' }}>
                     <TableContainer>
@@ -202,7 +237,7 @@ const ProductListPage: React.FC = () => {
                         </Table>
                     </TableContainer>
                     <TablePagination
-                        rowsPerPageOptions={[5, 10, 25, 50, { label: 'All', value: -1 }]} // 表示行数の選択肢を増やすなど調整
+                        rowsPerPageOptions={[5, 10, 25, 50, { label: 'All', value: -1 }]}
                         component="div"
                         count={filteredProducts?.length || 0}
                         rowsPerPage={rowsPerPage}
@@ -213,7 +248,7 @@ const ProductListPage: React.FC = () => {
                 </Paper>
             )}
 
-            {/* ★ 確認ダイアログのレンダリング */}
+            {/* 確認ダイアログのレンダリング */}
             {productToDelete && (
                 <ConfirmationDialog
                     open={dialogOpen}

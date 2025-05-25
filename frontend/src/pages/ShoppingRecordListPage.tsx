@@ -23,6 +23,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TablePagination from '@mui/material/TablePagination';
 import TextField from '@mui/material/TextField';
+import Stack from '@mui/material/Stack';
+import Grid from '@mui/material/Grid';
 
 const ShoppingRecordListPage: React.FC = () => {
     const queryClient = useQueryClient();
@@ -32,7 +34,10 @@ const ShoppingRecordListPage: React.FC = () => {
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
     // --- フィルタリング用 State ---
-    const [filterProductName, setFilterProductName] = useState(''); // 商品名フィルター
+    const [filterProductName, setFilterProductName] = useState('');
+    const [filterStoreName, setFilterStoreName] = useState('');
+    const [filterStartDate, setFilterStartDate] = useState('');
+    const [filterEndDate, setFilterEndDate] = useState('');
 
     // --- ダイアログの状態管理 ---
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -62,11 +67,26 @@ const ShoppingRecordListPage: React.FC = () => {
     // --- フィルタリングされた購買記録リスト (useMemoで計算) ---
     const filteredRecords = useMemo(() => {
         if (!records) return [];
-        if (!filterProductName) return records; // フィルターが空なら全件返す
-        return records.filter(record =>
-            record.product?.name.toLowerCase().includes(filterProductName.toLowerCase())
-        );
-    }, [records, filterProductName]); // records または filterProductName が変更された時のみ再計算
+        return records.filter(record => {
+            const productNameMatch = filterProductName
+                ? record.product?.name.toLowerCase().includes(filterProductName.toLowerCase())
+                : true;
+            const storeNameMatch = filterStoreName
+                ? record.store?.name.toLowerCase().includes(filterStoreName.toLowerCase())
+                : true;
+
+            // Purchase Dateの範囲フィルタリング
+            let dateMatch = true;
+            if (filterStartDate && record.purchase_date < filterStartDate) {
+                dateMatch = false;
+            }
+            if (filterEndDate && record.purchase_date > filterEndDate) {
+                dateMatch = false;
+            }
+
+            return productNameMatch && storeNameMatch && dateMatch;
+        });
+    }, [records, filterProductName, filterStoreName, filterStartDate, filterEndDate]);
 
     // --- 削除ボタンクリック時の処理を変更 ---
     const handleDeleteClick = (record: ShoppingRecord) => {
@@ -98,10 +118,16 @@ const ShoppingRecordListPage: React.FC = () => {
     };
 
     // --- フィルター入力変更ハンドラ ---
-    const handleFilterProductNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setFilterProductName(event.target.value);
-        setPage(0); // フィルター変更時は1ページ目に戻す
+    const createFilterHandleChange = (setter: React.Dispatch<React.SetStateAction<string>>) => {
+        return (event: React.ChangeEvent<HTMLInputElement>) => {
+            setter(event.target.value);
+            setPage(0);
+        }
     };
+    const handleFilterProductNameChange = createFilterHandleChange(setFilterProductName);
+    const handleFilterStoreNameChange = createFilterHandleChange(setFilterStoreName);
+    const handleFilterStartDateChange = createFilterHandleChange(setFilterStartDate);
+    const handleFilterEndDateChange = createFilterHandleChange(setFilterEndDate);
 
     if (isLoading) {
         return (
@@ -133,16 +159,42 @@ const ShoppingRecordListPage: React.FC = () => {
             <Typography variant="h4" component="h1" gutterBottom>
                 Shopping Records
             </Typography>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <TextField
-                    label="Filter by Product Name"
-                    variant="outlined"
-                    size="small"
-                    value={filterProductName}
-                    onChange={handleFilterProductNameChange}
-                    sx={{ width: '300px' }}
-                />
-                <Button variant="contained" component={Link} to="/shopping-records/new">
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, gap: 2 }}>
+                <Stack spacing={1} sx={{ width: 'calc(100% - 220px)'}}>
+                    <TextField
+                        label="Filter by Product Name"
+                        variant="outlined" size="small" fullWidth
+                        value={filterProductName} onChange={handleFilterProductNameChange}
+                    />
+                    <TextField
+                        label="Filter by Store Name"
+                        variant="outlined" size="small" fullWidth
+                        value={filterStoreName} onChange={handleFilterStoreNameChange}
+                    />
+                    <Grid container spacing={2}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                            <TextField
+                                label="Purchase Date From"
+                                type="date"
+                                variant="outlined" size="small" fullWidth
+                                value={filterStartDate}
+                                onChange={handleFilterStartDateChange}
+                                slotProps={{ inputLabel: { shrink: true } }}
+                            />
+                        </Grid>
+                        <Grid size={{ xs: 12, sm: 6 }}>
+                            <TextField
+                                label="Purchase Date To"
+                                type="date"
+                                variant="outlined" size="small" fullWidth
+                                value={filterEndDate}
+                                onChange={handleFilterEndDateChange}
+                                slotProps={{ inputLabel: { shrink: true } }}
+                            />
+                        </Grid>
+                    </Grid>
+                </Stack>
+                <Button variant="contained" component={Link} to="/shopping-records/new" sx={{ height: 'fit-content', mt:'8px' }}>
                     Add New Record
                 </Button>
             </Box>
@@ -150,7 +202,7 @@ const ShoppingRecordListPage: React.FC = () => {
             {(!records) ? (
                 <Typography>Loading data or no records available.</Typography>
             ) : (!filteredRecords || filteredRecords.length === 0) ? (
-                <Typography>No records match your filter criteria for product name "{filterProductName}".</Typography>
+                <Typography>No records match your filter criteria.</Typography>
             ) : (
                 <Paper sx={{ width: '100%', overflow: 'hidden' }}>
                     <TableContainer>
@@ -211,7 +263,7 @@ const ShoppingRecordListPage: React.FC = () => {
                 </Paper>
             )}
 
-            {/* ★ 確認ダイアログのレンダリング */}
+            {/* 確認ダイアログのレンダリング */}
             {recordToDelete && (
                 <ConfirmationDialog
                     open={dialogOpen}

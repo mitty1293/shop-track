@@ -23,6 +23,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TablePagination from '@mui/material/TablePagination'; // ページネーション
 import TextField from '@mui/material/TextField';
+import Stack from '@mui/material/Stack';
 
 const StoreListPage: React.FC = () => {
     const queryClient = useQueryClient();
@@ -31,8 +32,9 @@ const StoreListPage: React.FC = () => {
     const [page, setPage] = useState(0); // 現在のページ (0から始まる)
     const [rowsPerPage, setRowsPerPage] = useState(10); // 1ページあたりの行数
 
-    // --- ★ フィルタリング用 State ---
+    // --- フィルタリング用 State ---
     const [filterName, setFilterName] = useState('');
+    const [filterLocation, setFilterLocation] = useState('');
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
@@ -57,13 +59,15 @@ const StoreListPage: React.FC = () => {
     });
 
     // --- フィルタリングされた店舗リスト (useMemoで計算) ---
-  const filteredStores = useMemo(() => {
+    const filteredStores = useMemo(() => {
         if (!stores) return [];
-        if (!filterName) return stores; // フィルターが空なら全件返す
-        return stores.filter(store =>
-            store.name.toLowerCase().includes(filterName.toLowerCase()) // nameで部分一致
-        );
-    }, [stores, filterName]); // stores または filterName が変更された時のみ再計算
+        return stores.filter(store => {
+            const nameMatch = filterName ? store.name.toLowerCase().includes(filterName.toLowerCase()) : true;
+            const locationMatch = filterLocation ? store.location.toLowerCase().includes(filterLocation.toLowerCase()) : true;
+            return nameMatch && locationMatch; // name と location の AND 条件
+        });
+    }, [stores, filterName, filterLocation]);
+
 
     // --- 削除ボタンクリック時の処理を変更 ---
     const handleDeleteClick = (store: Store) => {
@@ -94,9 +98,15 @@ const StoreListPage: React.FC = () => {
         setPage(0);
     };
 
-    // --- フィルター入力変更ハンドラ ---
+    // --- name フィルター入力変更ハンドラ ---
     const handleFilterNameChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setFilterName(event.target.value);
+        setPage(0); // フィルター変更時は1ページ目に戻す
+    };
+
+    // location フィルター入力変更ハンドラ
+    const handleFilterLocationChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setFilterLocation(event.target.value);
         setPage(0); // フィルター変更時は1ページ目に戻す
     };
 
@@ -130,24 +140,38 @@ const StoreListPage: React.FC = () => {
             <Typography variant="h4" component="h1" gutterBottom>
                 Stores
             </Typography>
-             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <TextField
-                label="Filter by Name"
-                variant="outlined"
-                size="small"
-                value={filterName}
-                onChange={handleFilterNameChange}
-                sx={{ width: '300px' }}
-            />
-            <Button variant="contained" component={Link} to="/stores/new">
-                Add New Store
-            </Button>
-        </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2, gap: 2 }}>
+                <Stack spacing={1} sx={{ width: 'calc(100% - 200px)'}}>
+                    <TextField
+                        label="Filter by Name"
+                        variant="outlined"
+                        size="small"
+                        value={filterName}
+                        onChange={handleFilterNameChange}
+                        fullWidth // Stack 内で幅を広げる
+                    />
+                    <TextField
+                        label="Filter by Location"
+                        variant="outlined"
+                        size="small"
+                        value={filterLocation}
+                        onChange={handleFilterLocationChange}
+                        fullWidth // Stack 内で幅を広げる
+                    />
+                </Stack>
+                <Button variant="contained" component={Link} to="/stores/new" sx={{ height: 'fit-content', mt: '8px' }}>
+                    Add New Store
+                </Button>
+            </Box>
 
             {(!stores) ? (
                 <Typography>Loading data or no stores available.</Typography>
             ) : (!filteredStores || filteredStores.length === 0) ? (
-                <Typography>No stores match your filter criteria "{filterName}".</Typography>
+                <Typography>
+                    No stores match your filter criteria
+                    {filterName && ` for name "${filterName}"`}
+                    {filterLocation && ` and location "${filterLocation}"`}.
+                </Typography>
             ) : (
                 <Paper sx={{ width: '100%', overflow: 'hidden' }}>
                     <TableContainer>
