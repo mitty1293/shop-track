@@ -1,4 +1,8 @@
-const API_BASE_URL = 'https://shoptrack.fmitty.net';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+if (API_BASE_URL === undefined) {
+    throw new Error("VITE_API_BASE_URL is not defined. Please check your .env file.");
+}
 
 /**
  * 汎用的な GET リクエスト関数
