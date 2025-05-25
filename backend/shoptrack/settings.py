@@ -44,9 +44,11 @@ INSTALLED_APPS = [
     "rest_framework",
     "records.apps.RecordsConfig",
     "drf_spectacular",
+    "corsheaders",
 ]
 
 MIDDLEWARE = [
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -174,3 +176,10 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 3600
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
+
+# CORS settings
+# https://pypi.org/project/django-cors-headers/
+# CORS_ALLOWED_ORIGINS = [
+#     "https://shoptrack.fmitty.net",
+# ]
+CORS_ALLOW_ALL_ORIGINS = True
