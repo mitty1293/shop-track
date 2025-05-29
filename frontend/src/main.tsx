@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AuthProvider } from './contexts/AuthContext.tsx'
 // import './index.css'
 import App from './App.tsx'
 
@@ -14,7 +15,7 @@ import '@fontsource/roboto/700.css'; // Bold
 // Material UI
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { grey, deepPurple, purple } from '@mui/material/colors';
+import { grey } from '@mui/material/colors';
 
 const queryClient = new QueryClient()
 
@@ -44,7 +45,9 @@ createRoot(document.getElementById('root')!).render(
       <CssBaseline />
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <App />
+          <AuthProvider>
+            <App />
+          </AuthProvider>
         </BrowserRouter>
       </QueryClientProvider>
     </ThemeProvider>

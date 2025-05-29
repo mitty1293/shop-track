@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Routes, Route, Link } from 'react-router';
+import { useAuth } from './contexts/AuthContext';
 
 // --- Page Imports ---
 // Home Page
@@ -32,6 +33,8 @@ import StoreEditPage from './pages/StoreEditPage';
 import ShoppingRecordListPage from './pages/ShoppingRecordListPage';
 import ShoppingRecordCreatePage from './pages/ShoppingRecordCreatePage';
 import ShoppingRecordEditPage from './pages/ShoppingRecordEditPage';
+// Login Page
+import LoginPage from './pages/LoginPage';
 import './App.css'
 
 // --- Material UI ---
@@ -48,7 +51,7 @@ import ListItem from '@mui/material/ListItem';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
-// アイコン例 (必要に応じて他のアイコンも @mui/icons-material からインポート)
+// アイコン
 import HomeIcon from '@mui/icons-material/Home';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import CategoryIcon from '@mui/icons-material/Category';
@@ -57,11 +60,14 @@ import FactoryIcon from '@mui/icons-material/Factory'; // Manufacturer
 import PublicIcon from '@mui/icons-material/Public'; // Origin
 import StoreIcon from '@mui/icons-material/Store';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import LoginIcon from '@mui/icons-material/Login';
+import LogoutIcon from '@mui/icons-material/Logout';
 
 const drawerWidth = 240;
 
 function App() {
   const [mobileOpen, setMobileOpen] = useState(false); // モバイル用のドロワー開閉状態
+  const auth = useAuth();
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
   };
@@ -95,6 +101,25 @@ function App() {
           </ListItem>
         ))}
       </List>
+      <Divider />
+      {/* 認証状態に応じたナビゲーションリンク */}
+      <List>
+        {auth.isAuthenticated ? (
+          <ListItem disablePadding>
+            <ListItemButton onClick={() => { auth.logout(); if(mobileOpen) handleDrawerToggle(); }}>
+              <ListItemIcon><LogoutIcon /></ListItemIcon>
+              <ListItemText primary="Logout" />
+            </ListItemButton>
+          </ListItem>
+        ) : (
+          <ListItem disablePadding>
+            <ListItemButton component={Link} to="/login" onClick={mobileOpen ? handleDrawerToggle : undefined}>
+              <ListItemIcon><LoginIcon /></ListItemIcon>
+              <ListItemText primary="Login" />
+            </ListItemButton>
+          </ListItem>
+        )}
+      </List>
     </div>
   );
 
@@ -122,6 +147,9 @@ function App() {
           <Typography variant="h6" noWrap component="div">
             ShopTrack Admin
           </Typography>
+          {auth.isAuthenticated && auth.user && (
+            <Typography sx={{ mr: 2 }}>User: {auth.user.username}</Typography>
+          )}
         </Toolbar>
       </AppBar>
 
@@ -161,7 +189,7 @@ function App() {
         sx={{
           flexGrow: 1, // 残りのスペースを全て使う
           p: 3, // 内側にパディング
-          width: { sm: `calc(100% - ${drawerWidth}px)` }, // ドロワーの幅を考慮
+          width: { sm: `calc(100% - ${drawerWidth}px)` },
         }}
       >
         {/* AppBar の高さ分のスペーサー (コンテンツが隠れないように) */}
@@ -169,6 +197,8 @@ function App() {
         <Routes>
           {/* Home */}
           <Route path="/" element={<HomePage />} />
+          {/* Login */}
+          <Route path="/login" element={<LoginPage />} />
           {/* Product Routes */}
           <Route path="/products" element={<ProductListPage />} />
           <Route path="/products/new" element={<ProductCreatePage />} />

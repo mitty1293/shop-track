@@ -414,3 +414,47 @@ export const deleteShoppingRecord = async (id: number): Promise<void> => {
         throw new Error(`API request failed for DELETE /api/shopping-records/${id}/ with status ${response.status}`);
     }
 };
+
+// --- 認証関連のAPI関数 ---
+export interface TokenResponse {
+    access: string;
+    refresh: string;
+}
+export interface LoginCredentials {
+    username: string;
+    password: string;
+}
+
+/** ユーザーログインを行い、アクセストークンとリフレッシュトークンを取得する */
+export const loginUser = async (credentials: LoginCredentials): Promise<TokenResponse> => {
+    const response = await fetch(`${API_BASE_URL}/api/auth/token/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Login failed. Invalid username or password.' }));
+        console.error("Login API Error:", errorData);
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    }
+    return await response.json() as TokenResponse;
+};
+
+export interface RefreshTokenResponse {
+    access: string;
+}
+
+/** リフレッシュトークンを使い、新しいアクセストークンを取得する */
+export const refreshToken = async (refreshTokenValue: string): Promise<RefreshTokenResponse> => {
+    const response = await fetch(`${API_BASE_URL}/api/auth/token/refresh/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh: refreshTokenValue }),
+    });
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Token refresh failed.' }));
+        console.error("Refresh Token API Error:", errorData);
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+    }
+    return await response.json() as RefreshTokenResponse;
+};
