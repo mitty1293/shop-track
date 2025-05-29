@@ -75,5 +75,40 @@ These steps describe how to run the application locally for development purposes
 rye run test
 ```
 
+## User Management
+API users are created and managed through the Django Admin interface. This application does not provide an open user registration API.
+
+1.  **Create Superuser**:
+    If you haven't already, create a superuser to access the admin panel:
+    ```bash
+    rye run createsuperuser
+    ```
+    Follow the prompts to set the username and password.
+
+2.  **Access Django Admin**:
+    Go to `/admin/` in your browser (e.g., `http://localhost:8000/admin/`) and log in.
+
+3.  **Manage Users**:
+    In the Django Admin, navigate to "Authentication and Authorization" > "Users" to add, delete, or modify user accounts and their permissions.
+
+## Authentication
+This API uses JWT (JSON Web Token) for authentication, implemented with the `djangorestframework-simplejwt` library.
+
+### Authentication Endpoints
+* **Obtain Token (Login)**: `POST /api/auth/token/`
+    * Requires `username` and `password` in the request body.
+    * Returns `access` and `refresh` tokens.
+* **Refresh Access Token**: `POST /api/auth/token/refresh/`
+    * Requires a valid `refresh` token in the request body.
+    * Returns a new `access` token.
+* **Verify Access Token**: `POST /api/auth/token/verify/` (Optional)
+    * Requires an `access` token in the request body to check its validity.
+
+### API Request Authorization
+Include the access token in the `Authorization` header for protected endpoints:
+```
+Authorization: Bearer <your_access_token>
+```
+
 ## API Document
 You can access the API documentation in Swagger-UI format by navigating to `/api/docs/`, and in Redoc format by navigating to `/api/redoc/`.
