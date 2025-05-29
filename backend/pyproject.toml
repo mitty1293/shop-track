@@ -12,6 +12,7 @@ dependencies = [
     "dj-database-url>=2.3.0",
     "psycopg[binary]>=3.2.6",
     "django-cors-headers>=4.7.0",
+    "djangorestframework-simplejwt>=5.5.0",
 ]
 readme = "README.md"
 requires-python = ">= 3.8"
@@ -26,6 +27,7 @@ devserver = { cmd = "python manage.py runserver", env-file = ".env" }
 migrate = { cmd = "python manage.py migrate", env-file = ".env" }
 test = { cmd = "python manage.py test", env-file = ".env" }
 checkdeploy = { cmd = "python manage.py check --deploy", env-file = ".env" }
+createsuperuser = { cmd = "python manage.py createsuperuser", env-file = ".env" }
 
 [tool.ruff]
 line-length = 119
