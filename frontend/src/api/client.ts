@@ -4,16 +4,37 @@ if (API_BASE_URL === undefined) {
     throw new Error("VITE_API_BASE_URL is not defined. Please check your .env file.");
 }
 
+// localStorageからアクセストークンを取得するヘルパー関数
+const getAuthToken = (): string | null => {
+    // AuthContext.tsx で定義したキーと合わせる
+    return localStorage.getItem('accessToken');
+};
+
+// 共通のfetchオプションを生成するヘルパー関数
+const createAuthHeaders = (): HeadersInit => {
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+    };
+    const token = getAuthToken();
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+};
+
 /**
  * 汎用的な GET リクエスト関数
  * @param endpoint APIエンドポイントのパス (例: '/api/categories/')
  * @returns レスポンスの JSON データ
  */
 const fetchList = async <T>(endpoint: string): Promise<T[]> => {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`);
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {headers: createAuthHeaders()});
     if (!response.ok) {
         const errorData = await response.text();
         console.error(`API Error Response (${endpoint}):`, errorData);
+        if (response.status === 401) {
+            console.error("Authentication error: Token might be invalid or expired.");
+        }
         throw new Error(`API request failed for ${endpoint} with status ${response.status}`);
     }
     const data = await response.json();
@@ -30,7 +51,7 @@ export type PatchedCategoryInput = Partial<CategoryInput>;
 // === API クライアント関数 (Category 関連) ===
 export const getCategories = (): Promise<Category[]> => fetchList<Category>('/api/categories/');
 export const getCategoryById = async (id: number): Promise<Category> => {
-    const response = await fetch(`${API_BASE_URL}/api/categories/${id}/`);
+    const response = await fetch(`${API_BASE_URL}/api/categories/${id}/`, {headers: createAuthHeaders()});
     if (!response.ok) {
         const errorData = await response.text();
         console.error(`API Error Response (GET /api/categories/${id}/):`, errorData);
@@ -41,7 +62,7 @@ export const getCategoryById = async (id: number): Promise<Category> => {
 export const createCategory = async (categoryData: CategoryInput): Promise<Category> => {
     const response = await fetch(`${API_BASE_URL}/api/categories/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: createAuthHeaders(),
         body: JSON.stringify(categoryData),
     });
     if (!response.ok) {
@@ -54,7 +75,7 @@ export const createCategory = async (categoryData: CategoryInput): Promise<Categ
 export const updateCategory = async (id: number, categoryData: PatchedCategoryInput): Promise<Category> => {
     const response = await fetch(`${API_BASE_URL}/api/categories/${id}/`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: createAuthHeaders(),
         body: JSON.stringify(categoryData),
     });
     if (!response.ok) {
@@ -67,6 +88,7 @@ export const updateCategory = async (id: number, categoryData: PatchedCategoryIn
 export const deleteCategory = async (id: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/categories/${id}/`, {
         method: 'DELETE',
+        headers: createAuthHeaders(),
     });
     if (!response.ok) {
         const errorData = await response.text();
@@ -81,26 +103,33 @@ export interface UnitInput { name: string; }
 export type PatchedUnitInput = Partial<UnitInput>;
 export const getUnits = (): Promise<Unit[]> => fetchList<Unit>('/api/units/');
 export const getUnitById = async (id: number): Promise<Unit> => {
-    const response = await fetch(`${API_BASE_URL}/api/units/${id}/`); // Endpoint check
+    const response = await fetch(`${API_BASE_URL}/api/units/${id}/`, {headers: createAuthHeaders()});
     if (!response.ok) throw new Error(`API error: ${response.status}`);
     return await response.json() as Unit;
 };
 export const createUnit = async (data: UnitInput): Promise<Unit> => {
-    const response = await fetch(`${API_BASE_URL}/api/units/`, { // Endpoint check
-        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+    const response = await fetch(`${API_BASE_URL}/api/units/`, {
+        method: 'POST',
+        headers: createAuthHeaders(),
+        body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error(`API error: ${response.status}`);
     return await response.json() as Unit;
 };
 export const updateUnit = async (id: number, data: PatchedUnitInput): Promise<Unit> => {
-    const response = await fetch(`${API_BASE_URL}/api/units/${id}/`, { // Endpoint check
-        method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+    const response = await fetch(`${API_BASE_URL}/api/units/${id}/`, {
+        method: 'PATCH',
+        headers: createAuthHeaders(),
+        body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error(`API error: ${response.status}`);
     return await response.json() as Unit;
 };
 export const deleteUnit = async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/units/${id}/`, { method: 'DELETE' }); // Endpoint check
+    const response = await fetch(`${API_BASE_URL}/api/units/${id}/`, {
+        method: 'DELETE',
+        headers: createAuthHeaders(),
+    });
     if (!response.ok) throw new Error(`API error: ${response.status}`);
 };
 
@@ -110,26 +139,33 @@ export interface ManufacturerInput { name: string; }
 export type PatchedManufacturerInput = Partial<ManufacturerInput>;
 export const getManufacturers = (): Promise<Manufacturer[]> => fetchList<Manufacturer>('/api/manufacturers/');
 export const getManufacturerById = async (id: number): Promise<Manufacturer> => {
-    const response = await fetch(`${API_BASE_URL}/api/manufacturers/${id}/`); // Endpoint check
+    const response = await fetch(`${API_BASE_URL}/api/manufacturers/${id}/`, {headers: createAuthHeaders()});
     if (!response.ok) throw new Error(`API error: ${response.status}`);
     return await response.json() as Manufacturer;
 };
 export const createManufacturer = async (data: ManufacturerInput): Promise<Manufacturer> => {
-    const response = await fetch(`${API_BASE_URL}/api/manufacturers/`, { // Endpoint check
-        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+    const response = await fetch(`${API_BASE_URL}/api/manufacturers/`, {
+        method: 'POST',
+        headers: createAuthHeaders(),
+        body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error(`API error: ${response.status}`);
     return await response.json() as Manufacturer;
 };
 export const updateManufacturer = async (id: number, data: PatchedManufacturerInput): Promise<Manufacturer> => {
-    const response = await fetch(`${API_BASE_URL}/api/manufacturers/${id}/`, { // Endpoint check
-        method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+    const response = await fetch(`${API_BASE_URL}/api/manufacturers/${id}/`, {
+        method: 'PATCH',
+        headers: createAuthHeaders(),
+        body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error(`API error: ${response.status}`);
     return await response.json() as Manufacturer;
 };
 export const deleteManufacturer = async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/manufacturers/${id}/`, { method: 'DELETE' }); // Endpoint check
+    const response = await fetch(`${API_BASE_URL}/api/manufacturers/${id}/`, {
+        method: 'DELETE',
+        headers: createAuthHeaders(),
+    });
     if (!response.ok) throw new Error(`API error: ${response.status}`);
 };
 
@@ -139,26 +175,33 @@ export interface OriginInput { name: string; }
 export type PatchedOriginInput = Partial<OriginInput>;
 export const getOrigins = (): Promise<Origin[]> => fetchList<Origin>('/api/origins/');
 export const getOriginById = async (id: number): Promise<Origin> => {
-    const response = await fetch(`${API_BASE_URL}/api/origins/${id}/`); // Endpoint check
+    const response = await fetch(`${API_BASE_URL}/api/origins/${id}/`, {headers: createAuthHeaders()});
     if (!response.ok) throw new Error(`API error: ${response.status}`);
     return await response.json() as Origin;
 };
 export const createOrigin = async (data: OriginInput): Promise<Origin> => {
-    const response = await fetch(`${API_BASE_URL}/api/origins/`, { // Endpoint check
-        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+    const response = await fetch(`${API_BASE_URL}/api/origins/`, {
+        method: 'POST',
+        headers: createAuthHeaders(),
+        body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error(`API error: ${response.status}`);
     return await response.json() as Origin;
 };
 export const updateOrigin = async (id: number, data: PatchedOriginInput): Promise<Origin> => {
-    const response = await fetch(`${API_BASE_URL}/api/origins/${id}/`, { // Endpoint check
-        method: 'PATCH', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data)
+    const response = await fetch(`${API_BASE_URL}/api/origins/${id}/`, {
+        method: 'PATCH',
+        headers: createAuthHeaders(),
+        body: JSON.stringify(data),
     });
     if (!response.ok) throw new Error(`API error: ${response.status}`);
     return await response.json() as Origin;
 };
 export const deleteOrigin = async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/origins/${id}/`, { method: 'DELETE' }); // Endpoint check
+    const response = await fetch(`${API_BASE_URL}/api/origins/${id}/`, {
+        method: 'DELETE',
+        headers: createAuthHeaders(),
+    });
     if (!response.ok) throw new Error(`API error: ${response.status}`);
 };
 
@@ -172,7 +215,7 @@ export type PatchedStoreInput = Partial<StoreInput>;
 // --- API クライアント関数 (Store 関連) ---
 export const getStores = (): Promise<Store[]> => fetchList<Store>('/api/stores/');
 export const getStoreById = async (id: number): Promise<Store> => {
-    const response = await fetch(`${API_BASE_URL}/api/stores/${id}/`);
+    const response = await fetch(`${API_BASE_URL}/api/stores/${id}/`, {headers: createAuthHeaders()});
     if (!response.ok) {
         const errorData = await response.text();
         console.error(`API Error Response (GET /api/stores/${id}/):`, errorData);
@@ -183,7 +226,7 @@ export const getStoreById = async (id: number): Promise<Store> => {
 export const createStore = async (storeData: StoreInput): Promise<Store> => {
     const response = await fetch(`${API_BASE_URL}/api/stores/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: createAuthHeaders(),
         body: JSON.stringify(storeData),
     });
     if (!response.ok) {
@@ -196,7 +239,7 @@ export const createStore = async (storeData: StoreInput): Promise<Store> => {
 export const updateStore = async (id: number, storeData: PatchedStoreInput): Promise<Store> => {
     const response = await fetch(`${API_BASE_URL}/api/stores/${id}/`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: createAuthHeaders(),
         body: JSON.stringify(storeData),
     });
     if (!response.ok) {
@@ -209,6 +252,7 @@ export const updateStore = async (id: number, storeData: PatchedStoreInput): Pro
 export const deleteStore = async (id: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/stores/${id}/`, {
         method: 'DELETE',
+        headers: createAuthHeaders(),
     });
     if (!response.ok) {
         const errorData = await response.text();
@@ -249,7 +293,7 @@ export const getProducts = (): Promise<Product[]> => fetchList<Product>('/api/pr
  * @returns Product データ
  */
 export const getProductById = async (id: number): Promise<Product> => {
-    const response = await fetch(`${API_BASE_URL}/api/products/${id}/`);
+    const response = await fetch(`${API_BASE_URL}/api/products/${id}/`, {headers: createAuthHeaders()});
     if (!response.ok) {
         const errorData = await response.text();
         console.error(`API Error Response (GET /api/products/${id}/):`, errorData);
@@ -268,9 +312,7 @@ export const getProductById = async (id: number): Promise<Product> => {
 export const createProduct = async (productData: ProductInput): Promise<Product> => {
     const response = await fetch(`${API_BASE_URL}/api/products/`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: createAuthHeaders(),
         body: JSON.stringify(productData),
     });
   
@@ -297,9 +339,7 @@ export const createProduct = async (productData: ProductInput): Promise<Product>
 export const updateProduct = async (id: number, productData: PatchedProductInput): Promise<Product> => {
     const response = await fetch(`${API_BASE_URL}/api/products/${id}/`, {
         method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: createAuthHeaders(),
         body: JSON.stringify(productData),
     });
 
@@ -321,6 +361,7 @@ export const updateProduct = async (id: number, productData: PatchedProductInput
 export const deleteProduct = async (id: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/products/${id}/`, {
         method: 'DELETE',
+        headers: createAuthHeaders(),
     });
   
     // 多くの DELETE リクエストは成功時に 204 No Content を返す
@@ -362,7 +403,7 @@ export const getShoppingRecords = (): Promise<ShoppingRecord[]> => fetchList<Sho
 
 /** 指定された ID の購買記録詳細を取得する */
 export const getShoppingRecordById = async (id: number): Promise<ShoppingRecord> => {
-    const response = await fetch(`${API_BASE_URL}/api/shopping-records/${id}/`);
+    const response = await fetch(`${API_BASE_URL}/api/shopping-records/${id}/`, {headers: createAuthHeaders()});
     if (!response.ok) {
         const errorData = await response.text();
         console.error(`API Error Response (GET /api/shopping-records/${id}/):`, errorData);
@@ -375,7 +416,7 @@ export const getShoppingRecordById = async (id: number): Promise<ShoppingRecord>
 export const createShoppingRecord = async (recordData: ShoppingRecordInput): Promise<ShoppingRecord> => {
     const response = await fetch(`${API_BASE_URL}/api/shopping-records/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: createAuthHeaders(),
         body: JSON.stringify(recordData),
     });
     if (!response.ok) {
@@ -391,7 +432,7 @@ export const createShoppingRecord = async (recordData: ShoppingRecordInput): Pro
 export const updateShoppingRecord = async (id: number, recordData: PatchedShoppingRecordInput): Promise<ShoppingRecord> => {
     const response = await fetch(`${API_BASE_URL}/api/shopping-records/${id}/`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: createAuthHeaders(),
         body: JSON.stringify(recordData),
     });
     if (!response.ok) {
@@ -407,6 +448,7 @@ export const updateShoppingRecord = async (id: number, recordData: PatchedShoppi
 export const deleteShoppingRecord = async (id: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/shopping-records/${id}/`, {
         method: 'DELETE',
+        headers: createAuthHeaders(),
     });
     if (!response.ok) {
         const errorData = await response.text();
