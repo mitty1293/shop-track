@@ -1,264 +1,278 @@
+import axios, { AxiosError, InternalAxiosRequestConfig} from "axios";
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 if (API_BASE_URL === undefined) {
     throw new Error("VITE_API_BASE_URL is not defined. Please check your .env file.");
 }
 
-// localStorageからアクセストークンを取得するヘルパー関数
-const getAuthToken = (): string | null => {
-    // AuthContext.tsx で定義したキーと合わせる
-    return localStorage.getItem('accessToken');
-};
-
-// 共通のfetchオプションを生成するヘルパー関数
-const createAuthHeaders = (): HeadersInit => {
-    const headers: HeadersInit = {
+const axiosInstance = axios.create({
+    baseURL: API_BASE_URL,
+    headers: {
         'Content-Type': 'application/json',
-    };
-    const token = getAuthToken();
-    if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+    },
+});
+
+// リクエストインターセプター: ヘッダーにアクセストークンを付与
+axiosInstance.interceptors.request.use(
+    (config: InternalAxiosRequestConfig) => {
+        // localStorage からアクセストークンを取得 (AuthContext とキーを合わせる)
+        const accessToken = localStorage.getItem('accessToken');
+        if (accessToken && config.headers) {
+            // ログインやトークンリフレッシュのエンドポイントには Authorization ヘッダーを付与しない
+            if (!config.url?.includes('/auth/token')) {
+                config.headers.Authorization = `Bearer ${accessToken}`;
+            }
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
     }
-    return headers;
+);
+
+// レスポンスインターセプター: 401エラー時のトークンリフレッシュ処理
+let isRefreshing = false; // トークンリフレッシュ中かどうかのフラグ
+let failedQueue: Array<{ resolve: (value?: any) => void; reject: (reason?: any) => void }> = []; // リフレッシュ中に失敗したリクエストのキュー
+const processQueue = (error: AxiosError | null, token: string | null = null) => {
+    failedQueue.forEach(prom => {
+        if (error) {
+            prom.reject(error);
+        } else {
+            prom.resolve(token);
+        }
+    });
+    failedQueue = [];
 };
 
-/**
- * 汎用的な GET リクエスト関数
- * @param endpoint APIエンドポイントのパス (例: '/api/categories/')
- * @returns レスポンスの JSON データ
- */
-const fetchList = async <T>(endpoint: string): Promise<T[]> => {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {headers: createAuthHeaders()});
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error(`API Error Response (${endpoint}):`, errorData);
-        if (response.status === 401) {
-            console.error("Authentication error: Token might be invalid or expired.");
+axiosInstance.interceptors.response.use(
+    (response) => {
+        return response; // 正常なレスポンスはそのまま返す
+    },
+    async (error: AxiosError) => {
+        const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+        // 401エラーで、かつトークンリフレッシュエンドポイントへのリクエストでなければリフレッシュ処理
+        if (error.response?.status === 401 && originalRequest && !originalRequest.url?.includes('/auth/token/refresh/') && !originalRequest._retry) {
+            if (isRefreshing) {
+                // すでにリフレッシュ処理中なら、新しいPromiseを作ってキューに追加
+                return new Promise(function(resolve, reject) {
+                    failedQueue.push({ resolve, reject });
+                }).then(token => {
+                    if (originalRequest.headers) {
+                        originalRequest.headers['Authorization'] = 'Bearer ' + token;
+                    }
+                    return axiosInstance(originalRequest); // リフレッシュされたトークンで元のリクエストを再試行
+                }).catch(err => {
+                    return Promise.reject(err);
+                });
+            }
+
+            originalRequest._retry = true; // 再試行フラグを立てる (無限ループ防止)
+            isRefreshing = true;
+
+            const refreshTokenValue = localStorage.getItem('refreshToken');
+            if (!refreshTokenValue) {
+                console.log('No refresh token found, redirecting to login.');
+                // ここで AuthContext の logout を呼び出すか、グローバルイベントを発行
+                window.dispatchEvent(new CustomEvent('auth-error', { detail: { reason: 'no-refresh-token' } }));
+                isRefreshing = false;
+                return Promise.reject(error);
+            }
+
+            try {
+                const refreshResponse = await axios.post<RefreshTokenResponse>(`${API_BASE_URL}/api/auth/token/refresh/`, {
+                    refresh: refreshTokenValue,
+                });
+
+                const newAccessToken = refreshResponse.data.access;
+                localStorage.setItem('accessToken', newAccessToken); // 新しいアクセストークンを保存
+                if (axiosInstance.defaults.headers.common) {
+                    axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+                } else if (originalRequest.headers) { // フォールバック
+                    originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+                }
+
+                processQueue(null, newAccessToken); // キューに溜まったリクエストを処理
+                isRefreshing = false;
+                // 元のリクエストのヘッダーも更新して再試行
+                if (originalRequest.headers) {
+                    originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+                }
+                return axiosInstance(originalRequest);
+            } catch (refreshError) {
+                console.error('Token refresh failed in interceptor:', refreshError);
+                processQueue(refreshError as AxiosError, null); // キューに溜まったリクエストをエラーで処理
+                isRefreshing = false;
+                // ここで AuthContext の logout を呼び出すか、グローバルイベントを発行
+                window.dispatchEvent(new CustomEvent('auth-error', { detail: { reason: 'refresh-failed' } }));
+                return Promise.reject(refreshError);
+            }
         }
-        throw new Error(`API request failed for ${endpoint} with status ${response.status}`);
+        // 401以外のエラー、またはリフレッシュ対象外のエラーはそのまま返す
+        return Promise.reject(error);
     }
-    const data = await response.json();
-    return data as T[];
+);
+
+// --- 認証関連のAPI関数 ---
+export interface TokenResponse {
+    access: string;
+    refresh: string;
 }
+export interface LoginCredentials {
+    username: string;
+    password: string;
+}
+export interface RefreshTokenResponse {
+    access: string;
+}
+export interface User {
+    id: number;
+    username: string;
+    email?: string;
+}
+
+/** ユーザーログインを行い、アクセストークンとリフレッシュトークンを取得する */
+export const loginUser = async (credentials: LoginCredentials): Promise<TokenResponse> => {
+    const response = await axiosInstance.post<TokenResponse>('/api/auth/token/', credentials);
+    return response.data;
+};
+
+/** リフレッシュトークンを使い、新しいアクセストークンを取得する */
+export const refreshTokenApi = async (refreshTokenValue: string): Promise<RefreshTokenResponse> => {
+    const response = await axiosInstance.post<RefreshTokenResponse>('/api/auth/token/refresh/', { refresh: refreshTokenValue });
+    return response.data;
+};
+
+// ユーザープロファイルを取得する
+export const fetchUserProfile = async (): Promise<User> => {
+    const response = await axiosInstance.get<User>('/api/auth/user/'); // 仮のエンドポイント
+    return response.data;
+};
 
 // === Category ===
 export interface Category { id: number; name: string; }
-// カテゴリ作成/更新(PUT)時に API へ送るデータの型
 export interface CategoryInput { name: string; }
-// カテゴリ部分更新(PATCH)時に API へ送るデータの型
 export type PatchedCategoryInput = Partial<CategoryInput>;
 
-// === API クライアント関数 (Category 関連) ===
-export const getCategories = (): Promise<Category[]> => fetchList<Category>('/api/categories/');
+export const getCategories = async (): Promise<Category[]> => {
+    const response = await axiosInstance.get<Category[]>('/api/categories/');
+    return response.data;
+};
 export const getCategoryById = async (id: number): Promise<Category> => {
-    const response = await fetch(`${API_BASE_URL}/api/categories/${id}/`, {headers: createAuthHeaders()});
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error(`API Error Response (GET /api/categories/${id}/):`, errorData);
-        throw new Error(`API request failed for GET /api/categories/${id}/ with status ${response.status}`);
-    }
-    return await response.json() as Category;
+    const response = await axiosInstance.get<Category>(`/api/categories/${id}/`);
+    return response.data;
 };
-export const createCategory = async (categoryData: CategoryInput): Promise<Category> => {
-    const response = await fetch(`${API_BASE_URL}/api/categories/`, {
-        method: 'POST',
-        headers: createAuthHeaders(),
-        body: JSON.stringify(categoryData),
-    });
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error("API Error Response (POST /api/categories/):", errorData);
-        throw new Error(`API request failed for POST /api/categories/ with status ${response.status}`);
-    }
-    return await response.json() as Category;
+export const createCategory = async (data: CategoryInput): Promise<Category> => {
+    const response = await axiosInstance.post<Category>('/api/categories/', data);
+    return response.data;
 };
-export const updateCategory = async (id: number, categoryData: PatchedCategoryInput): Promise<Category> => {
-    const response = await fetch(`${API_BASE_URL}/api/categories/${id}/`, {
-        method: 'PATCH',
-        headers: createAuthHeaders(),
-        body: JSON.stringify(categoryData),
-    });
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error(`API Error Response (PATCH /api/categories/${id}/):`, errorData);
-        throw new Error(`API request failed for PATCH /api/categories/${id}/ with status ${response.status}`);
-    }
-    return await response.json() as Category;
+export const updateCategory = async (id: number, data: PatchedCategoryInput): Promise<Category> => {
+    const response = await axiosInstance.patch<Category>(`/api/categories/${id}/`, data);
+    return response.data;
 };
 export const deleteCategory = async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/categories/${id}/`, {
-        method: 'DELETE',
-        headers: createAuthHeaders(),
-    });
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error(`API Error Response (DELETE /api/categories/${id}/):`, errorData);
-        throw new Error(`API request failed for DELETE /api/categories/${id}/ with status ${response.status}`);
-    }
+    await axiosInstance.delete(`/api/categories/${id}/`);
 };
 
 // === Unit ===
 export interface Unit { id: number; name: string; }
 export interface UnitInput { name: string; }
 export type PatchedUnitInput = Partial<UnitInput>;
-export const getUnits = (): Promise<Unit[]> => fetchList<Unit>('/api/units/');
+
+export const getUnits = async (): Promise<Unit[]> => {
+    const response = await axiosInstance.get<Unit[]>('/api/units/');
+    return response.data;
+};
 export const getUnitById = async (id: number): Promise<Unit> => {
-    const response = await fetch(`${API_BASE_URL}/api/units/${id}/`, {headers: createAuthHeaders()});
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
-    return await response.json() as Unit;
+    const response = await axiosInstance.get<Unit>(`/api/units/${id}/`);
+    return response.data;
 };
 export const createUnit = async (data: UnitInput): Promise<Unit> => {
-    const response = await fetch(`${API_BASE_URL}/api/units/`, {
-        method: 'POST',
-        headers: createAuthHeaders(),
-        body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
-    return await response.json() as Unit;
+    const response = await axiosInstance.post<Unit>('/api/units/', data);
+    return response.data;
 };
 export const updateUnit = async (id: number, data: PatchedUnitInput): Promise<Unit> => {
-    const response = await fetch(`${API_BASE_URL}/api/units/${id}/`, {
-        method: 'PATCH',
-        headers: createAuthHeaders(),
-        body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
-    return await response.json() as Unit;
+    const response = await axiosInstance.patch<Unit>(`/api/units/${id}/`, data);
+    return response.data;
 };
 export const deleteUnit = async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/units/${id}/`, {
-        method: 'DELETE',
-        headers: createAuthHeaders(),
-    });
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    await axiosInstance.delete(`/api/units/${id}/`);
 };
 
 // === Manufacturer ===
 export interface Manufacturer { id: number; name: string; }
 export interface ManufacturerInput { name: string; }
 export type PatchedManufacturerInput = Partial<ManufacturerInput>;
-export const getManufacturers = (): Promise<Manufacturer[]> => fetchList<Manufacturer>('/api/manufacturers/');
+
+export const getManufacturers = async (): Promise<Manufacturer[]> => {
+    const response = await axiosInstance.get<Manufacturer[]>('/api/manufacturers/');
+    return response.data;
+};
 export const getManufacturerById = async (id: number): Promise<Manufacturer> => {
-    const response = await fetch(`${API_BASE_URL}/api/manufacturers/${id}/`, {headers: createAuthHeaders()});
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
-    return await response.json() as Manufacturer;
+    const response = await axiosInstance.get<Manufacturer>(`/api/manufacturers/${id}/`);
+    return response.data;
 };
 export const createManufacturer = async (data: ManufacturerInput): Promise<Manufacturer> => {
-    const response = await fetch(`${API_BASE_URL}/api/manufacturers/`, {
-        method: 'POST',
-        headers: createAuthHeaders(),
-        body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
-    return await response.json() as Manufacturer;
+    const response = await axiosInstance.post<Manufacturer>('/api/manufacturers/', data);
+    return response.data;
 };
 export const updateManufacturer = async (id: number, data: PatchedManufacturerInput): Promise<Manufacturer> => {
-    const response = await fetch(`${API_BASE_URL}/api/manufacturers/${id}/`, {
-        method: 'PATCH',
-        headers: createAuthHeaders(),
-        body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
-    return await response.json() as Manufacturer;
+    const response = await axiosInstance.patch<Manufacturer>(`/api/manufacturers/${id}/`, data);
+    return response.data;
 };
 export const deleteManufacturer = async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/manufacturers/${id}/`, {
-        method: 'DELETE',
-        headers: createAuthHeaders(),
-    });
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    await axiosInstance.delete(`/api/manufacturers/${id}/`);
 };
 
 // === Origin ===
 export interface Origin { id: number; name: string; }
 export interface OriginInput { name: string; }
 export type PatchedOriginInput = Partial<OriginInput>;
-export const getOrigins = (): Promise<Origin[]> => fetchList<Origin>('/api/origins/');
+
+export const getOrigins = async (): Promise<Origin[]> => {
+    const response = await axiosInstance.get<Origin[]>('/api/origins/');
+    return response.data;
+};
 export const getOriginById = async (id: number): Promise<Origin> => {
-    const response = await fetch(`${API_BASE_URL}/api/origins/${id}/`, {headers: createAuthHeaders()});
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
-    return await response.json() as Origin;
+    const response = await axiosInstance.get<Origin>(`/api/origins/${id}/`);
+    return response.data;
 };
 export const createOrigin = async (data: OriginInput): Promise<Origin> => {
-    const response = await fetch(`${API_BASE_URL}/api/origins/`, {
-        method: 'POST',
-        headers: createAuthHeaders(),
-        body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
-    return await response.json() as Origin;
+    const response = await axiosInstance.post<Origin>('/api/origins/', data);
+    return response.data;
 };
 export const updateOrigin = async (id: number, data: PatchedOriginInput): Promise<Origin> => {
-    const response = await fetch(`${API_BASE_URL}/api/origins/${id}/`, {
-        method: 'PATCH',
-        headers: createAuthHeaders(),
-        body: JSON.stringify(data),
-    });
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
-    return await response.json() as Origin;
+    const response = await axiosInstance.patch<Origin>(`/api/origins/${id}/`, data);
+    return response.data;
 };
 export const deleteOrigin = async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/origins/${id}/`, {
-        method: 'DELETE',
-        headers: createAuthHeaders(),
-    });
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    await axiosInstance.delete(`/api/origins/${id}/`);
 };
 
 // === Store ===
 export interface Store { id: number; name: string; location: string; }
-// ストア作成/更新(PUT)時に API へ送るデータの型 (name と location が必須)
 export interface StoreInput { name: string; location: string; }
-// ストア部分更新(PATCH)時に API へ送るデータの型
 export type PatchedStoreInput = Partial<StoreInput>;
 
-// --- API クライアント関数 (Store 関連) ---
-export const getStores = (): Promise<Store[]> => fetchList<Store>('/api/stores/');
+export const getStores = async (): Promise<Store[]> => {
+    const response = await axiosInstance.get<Store[]>('/api/stores/');
+    return response.data;
+};
 export const getStoreById = async (id: number): Promise<Store> => {
-    const response = await fetch(`${API_BASE_URL}/api/stores/${id}/`, {headers: createAuthHeaders()});
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error(`API Error Response (GET /api/stores/${id}/):`, errorData);
-        throw new Error(`API request failed for GET /api/stores/${id}/ with status ${response.status}`);
-    }
-    return await response.json() as Store;
+    const response = await axiosInstance.get<Store>(`/api/stores/${id}/`);
+    return response.data;
 };
-export const createStore = async (storeData: StoreInput): Promise<Store> => {
-    const response = await fetch(`${API_BASE_URL}/api/stores/`, {
-        method: 'POST',
-        headers: createAuthHeaders(),
-        body: JSON.stringify(storeData),
-    });
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error("API Error Response (POST /api/stores/):", errorData);
-        throw new Error(`API request failed for POST /api/stores/ with status ${response.status}`);
-    }
-    return await response.json() as Store;
+export const createStore = async (data: StoreInput): Promise<Store> => {
+    const response = await axiosInstance.post<Store>('/api/stores/', data);
+    return response.data;
 };
-export const updateStore = async (id: number, storeData: PatchedStoreInput): Promise<Store> => {
-    const response = await fetch(`${API_BASE_URL}/api/stores/${id}/`, {
-        method: 'PATCH',
-        headers: createAuthHeaders(),
-        body: JSON.stringify(storeData),
-    });
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error(`API Error Response (PATCH /api/stores/${id}/):`, errorData);
-        throw new Error(`API request failed for PATCH /api/stores/${id}/ with status ${response.status}`);
-    }
-    return await response.json() as Store;
+export const updateStore = async (id: number, data: PatchedStoreInput): Promise<Store> => {
+    const response = await axiosInstance.patch<Store>(`/api/stores/${id}/`, data);
+    return response.data;
 };
 export const deleteStore = async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/stores/${id}/`, {
-        method: 'DELETE',
-        headers: createAuthHeaders(),
-    });
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error(`API Error Response (DELETE /api/stores/${id}/):`, errorData);
-        throw new Error(`API request failed for DELETE /api/stores/${id}/ with status ${response.status}`);
-    }
+    await axiosInstance.delete(`/api/stores/${id}/`);
 };
 
 // === Product ===
@@ -270,8 +284,6 @@ export interface Product {
     manufacturer: Manufacturer | null;
     origin: Origin | null;
 }
-
-// 商品作成時に API へ送るデータの型 (IDは不要、関連データはIDのみ送信)
 export interface ProductInput {
     name: string;
     category_id: number;
@@ -279,99 +291,26 @@ export interface ProductInput {
     manufacturer_id?: number | null;
     origin_id?: number | null;
 }
-
-// 商品更新 (PATCH) 時に API へ送るデータの型 (部分更新のため全てオプショナル)
 export type PatchedProductInput = Partial<ProductInput>;
 
-// --- Read ---
-/** 商品一覧を取得 */
-export const getProducts = (): Promise<Product[]> => fetchList<Product>('/api/products/');
-
-/**
- * 指定された ID の商品詳細を取得する
- * @param id 取得する商品の ID
- * @returns Product データ
- */
+export const getProducts = async (): Promise<Product[]> => {
+    const response = await axiosInstance.get<Product[]>('/api/products/');
+    return response.data;
+};
 export const getProductById = async (id: number): Promise<Product> => {
-    const response = await fetch(`${API_BASE_URL}/api/products/${id}/`, {headers: createAuthHeaders()});
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error(`API Error Response (GET /api/products/${id}/):`, errorData);
-        throw new Error(`API request failed for GET /api/products/${id}/ with status ${response.status}`);
-    }
-    const data = await response.json();
-    return data as Product;
+    const response = await axiosInstance.get<Product>(`/api/products/${id}/`);
+    return response.data;
 };
-
-// --- Create ---
-/**
- * 新しい商品を作成する
- * @param productData ProductInput 型の商品データ
- * @returns 作成された Product データ
- */
-export const createProduct = async (productData: ProductInput): Promise<Product> => {
-    const response = await fetch(`${API_BASE_URL}/api/products/`, {
-        method: 'POST',
-        headers: createAuthHeaders(),
-        body: JSON.stringify(productData),
-    });
-  
-    if (!response.ok) {
-        let errorDetails = await response.text();
-        try {
-            const errorJson = JSON.parse(errorDetails);
-            errorDetails = JSON.stringify(errorJson, null, 2);
-        } catch (e) {
-            // JSON でなければそのままテキストで表示
-        }
-        console.error("API Error Response (POST /api/products/):", errorDetails);
-        throw new Error(`API request failed for POST /api/products/ with status ${response.status}`);
-    }
-  
-    const createdProduct = await response.json();
-    return createdProduct as Product;
+export const createProduct = async (data: ProductInput): Promise<Product> => {
+    const response = await axiosInstance.post<Product>('/api/products/', data);
+    return response.data;
 };
-
-// --- Update ---
-/**
- * 指定された ID の商品を更新 (部分更新) する
- */
-export const updateProduct = async (id: number, productData: PatchedProductInput): Promise<Product> => {
-    const response = await fetch(`${API_BASE_URL}/api/products/${id}/`, {
-        method: 'PATCH',
-        headers: createAuthHeaders(),
-        body: JSON.stringify(productData),
-    });
-
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error(`API Error Response (PATCH /api/products/${id}/):`, errorData);
-        throw new Error(`API request failed for PATCH /api/products/${id}/ with status ${response.status}`);
-    }
-    const updatedProduct = await response.json();
-    return updatedProduct as Product;
+export const updateProduct = async (id: number, data: PatchedProductInput): Promise<Product> => {
+    const response = await axiosInstance.patch<Product>(`/api/products/${id}/`, data);
+    return response.data;
 };
-  
-// --- Delete ---
-/**
- * 指定された ID の商品を削除する
- * @param id 削除する商品の ID
- * @returns Promise<void> (成功時は通常レスポンスボディがないため)
- */
 export const deleteProduct = async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/products/${id}/`, {
-        method: 'DELETE',
-        headers: createAuthHeaders(),
-    });
-  
-    // 多くの DELETE リクエストは成功時に 204 No Content を返す
-    // response.ok は 200-299 の範囲のステータスコードで true になる
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error(`API Error Response (DELETE /api/products/${id}/):`, errorData);
-        throw new Error(`API request failed for DELETE /api/products/${id}/ with status ${response.status}`);
-    }
-    // 成功時は何も返さない (void)
+    await axiosInstance.delete(`/api/products/${id}/`);
 };
 
 // === ShoppingRecord ===
@@ -383,8 +322,6 @@ export interface ShoppingRecord {
     store: Store;
     product: Product;
 }
-  
-// 購買記録 作成/更新(PUT)時に API へ送るデータの型
 export interface ShoppingRecordInput {
     price: number;
     purchase_date: string; // Expects a string in YYYYY-MM-DD format
@@ -392,111 +329,24 @@ export interface ShoppingRecordInput {
     store_id: number;
     product_id: number;
 }
-
-// 購買記録 部分更新(PATCH)時に API へ送るデータの型
 export type PatchedShoppingRecordInput = Partial<ShoppingRecordInput>;
 
-
-// --- API クライアント関数 (ShoppingRecord 関連) ---
-/** 購買記録一覧を取得 */
-export const getShoppingRecords = (): Promise<ShoppingRecord[]> => fetchList<ShoppingRecord>('/api/shopping-records/');
-
-/** 指定された ID の購買記録詳細を取得する */
+export const getShoppingRecords = async (): Promise<ShoppingRecord[]> => {
+    const response = await axiosInstance.get<ShoppingRecord[]>('/api/shopping-records/');
+    return response.data;
+};
 export const getShoppingRecordById = async (id: number): Promise<ShoppingRecord> => {
-    const response = await fetch(`${API_BASE_URL}/api/shopping-records/${id}/`, {headers: createAuthHeaders()});
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error(`API Error Response (GET /api/shopping-records/${id}/):`, errorData);
-        throw new Error(`API request failed for GET /api/shopping-records/${id}/ with status ${response.status}`);
-    }
-    return await response.json() as ShoppingRecord;
+    const response = await axiosInstance.get<ShoppingRecord>(`/api/shopping-records/${id}/`);
+    return response.data;
 };
-
-/** 新しい購買記録を作成する */
-export const createShoppingRecord = async (recordData: ShoppingRecordInput): Promise<ShoppingRecord> => {
-    const response = await fetch(`${API_BASE_URL}/api/shopping-records/`, {
-        method: 'POST',
-        headers: createAuthHeaders(),
-        body: JSON.stringify(recordData),
-    });
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error("API Error Response (POST /api/shopping-records/):", errorData);
-        // TODO: より詳細なエラーハンドリング (サーバーからのバリデーションエラー等)
-        throw new Error(`API request failed for POST /api/shopping-records/ with status ${response.status}`);
-    }
-    return await response.json() as ShoppingRecord;
+export const createShoppingRecord = async (data: ShoppingRecordInput): Promise<ShoppingRecord> => {
+    const response = await axiosInstance.post<ShoppingRecord>('/api/shopping-records/', data);
+    return response.data;
 };
-
-/** 指定された ID の購買記録を更新 (部分更新) する */
-export const updateShoppingRecord = async (id: number, recordData: PatchedShoppingRecordInput): Promise<ShoppingRecord> => {
-    const response = await fetch(`${API_BASE_URL}/api/shopping-records/${id}/`, {
-        method: 'PATCH',
-        headers: createAuthHeaders(),
-        body: JSON.stringify(recordData),
-    });
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error(`API Error Response (PATCH /api/shopping-records/${id}/):`, errorData);
-        // TODO: より詳細なエラーハンドリング
-        throw new Error(`API request failed for PATCH /api/shopping-records/${id}/ with status ${response.status}`);
-    }
-    return await response.json() as ShoppingRecord;
+export const updateShoppingRecord = async (id: number, data: PatchedShoppingRecordInput): Promise<ShoppingRecord> => {
+    const response = await axiosInstance.patch<ShoppingRecord>(`/api/shopping-records/${id}/`, data);
+    return response.data;
 };
-
-/** 指定された ID の購買記録を削除する */
 export const deleteShoppingRecord = async (id: number): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/api/shopping-records/${id}/`, {
-        method: 'DELETE',
-        headers: createAuthHeaders(),
-    });
-    if (!response.ok) {
-        const errorData = await response.text();
-        console.error(`API Error Response (DELETE /api/shopping-records/${id}/):`, errorData);
-        throw new Error(`API request failed for DELETE /api/shopping-records/${id}/ with status ${response.status}`);
-    }
-};
-
-// --- 認証関連のAPI関数 ---
-export interface TokenResponse {
-    access: string;
-    refresh: string;
-}
-export interface LoginCredentials {
-    username: string;
-    password: string;
-}
-
-/** ユーザーログインを行い、アクセストークンとリフレッシュトークンを取得する */
-export const loginUser = async (credentials: LoginCredentials): Promise<TokenResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/auth/token/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials),
-    });
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'Login failed. Invalid username or password.' }));
-        console.error("Login API Error:", errorData);
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
-    return await response.json() as TokenResponse;
-};
-
-export interface RefreshTokenResponse {
-    access: string;
-}
-
-/** リフレッシュトークンを使い、新しいアクセストークンを取得する */
-export const refreshToken = async (refreshTokenValue: string): Promise<RefreshTokenResponse> => {
-    const response = await fetch(`${API_BASE_URL}/api/auth/token/refresh/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh: refreshTokenValue }),
-    });
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ detail: 'Token refresh failed.' }));
-        console.error("Refresh Token API Error:", errorData);
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-    }
-    return await response.json() as RefreshTokenResponse;
+    await axiosInstance.delete(`/api/shopping-records/${id}/`);
 };
