@@ -1,10 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useNavigate } from 'react-router';
 import {
     loginUser,
     refreshToken,
     LoginCredentials,
-    TokenResponse,
-    RefreshTokenResponse,
 } from '../api/client';
 
 interface User {
@@ -36,6 +35,7 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+    const navigate = useNavigate();
     const [user, setUser] = useState<User | null>(null);
     const [accessToken, setAccessToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true); // 初期表示時はtrue
@@ -141,7 +141,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.removeItem(REFRESH_TOKEN_KEY);
         localStorage.removeItem(ACCESS_TOKEN_KEY); // 保存していれば削除
         console.log('User logged out');
-        // navigate('/login'); // ログアウト後にログインページに遷移させるのが一般的
+        navigate('/login'); // ログアウト後にログインページに遷移
     };
 
 

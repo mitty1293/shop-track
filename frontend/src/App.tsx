@@ -35,6 +35,8 @@ import ShoppingRecordCreatePage from './pages/ShoppingRecordCreatePage';
 import ShoppingRecordEditPage from './pages/ShoppingRecordEditPage';
 // Login Page
 import LoginPage from './pages/LoginPage';
+// Protected Route
+import ProtectedRoute from './components/ProtectedRoute';
 import './App.css'
 
 // --- Material UI ---
@@ -199,34 +201,35 @@ function App() {
           <Route path="/" element={<HomePage />} />
           {/* Login */}
           <Route path="/login" element={<LoginPage />} />
+
           {/* Product Routes */}
-          <Route path="/products" element={<ProductListPage />} />
-          <Route path="/products/new" element={<ProductCreatePage />} />
-          <Route path="/products/:id/edit" element={<ProductEditPage />} />
+          <Route path="/products" element={<ProtectedRoute><ProductListPage /></ProtectedRoute>} />
+          <Route path="/products/new" element={<ProtectedRoute><ProductCreatePage /></ProtectedRoute>} />
+          <Route path="/products/:id/edit" element={<ProtectedRoute><ProductEditPage /></ProtectedRoute>} />
           {/* Category Routes */}
-          <Route path="/categories" element={<CategoryListPage />} />
-          <Route path="/categories/new" element={<CategoryCreatePage />} />
-          <Route path="/categories/:id/edit" element={<CategoryEditPage />} />
+          <Route path="/categories" element={<ProtectedRoute><CategoryListPage /></ProtectedRoute>} />
+          <Route path="/categories/new" element={<ProtectedRoute><CategoryCreatePage /></ProtectedRoute>} />
+          <Route path="/categories/:id/edit" element={<ProtectedRoute><CategoryEditPage /></ProtectedRoute>} />
           {/* Unit Routes */}
-          <Route path="/units" element={<UnitListPage />} />
-          <Route path="/units/new" element={<UnitCreatePage />} />
-          <Route path="/units/:id/edit" element={<UnitEditPage />} />
+          <Route path="/units" element={<ProtectedRoute><UnitListPage /></ProtectedRoute>} />
+          <Route path="/units/new" element={<ProtectedRoute><UnitCreatePage /></ProtectedRoute>} />
+          <Route path="/units/:id/edit" element={<ProtectedRoute><UnitEditPage /></ProtectedRoute>} />
           {/* Manufacturer Routes */}
-          <Route path="/manufacturers" element={<ManufacturerListPage />} />
-          <Route path="/manufacturers/new" element={<ManufacturerCreatePage />} />
-          <Route path="/manufacturers/:id/edit" element={<ManufacturerEditPage />} />
+          <Route path="/manufacturers" element={<ProtectedRoute><ManufacturerListPage /></ProtectedRoute>} />
+          <Route path="/manufacturers/new" element={<ProtectedRoute><ManufacturerCreatePage /></ProtectedRoute>} />
+          <Route path="/manufacturers/:id/edit" element={<ProtectedRoute><ManufacturerEditPage /></ProtectedRoute>} />
           {/* Origin Routes */}
-          <Route path="/origins" element={<OriginListPage />} />
-          <Route path="/origins/new" element={<OriginCreatePage />} />
-          <Route path="/origins/:id/edit" element={<OriginEditPage />} />
+          <Route path="/origins" element={<ProtectedRoute><OriginListPage /></ProtectedRoute>} />
+          <Route path="/origins/new" element={<ProtectedRoute><OriginCreatePage /></ProtectedRoute>} />
+          <Route path="/origins/:id/edit" element={<ProtectedRoute><OriginEditPage /></ProtectedRoute>} />
           {/* Store Routes */}
-          <Route path="/stores" element={<StoreListPage />} />
-          <Route path="/stores/new" element={<StoreCreatePage />} />
-          <Route path="/stores/:id/edit" element={<StoreEditPage />} />
+          <Route path="/stores" element={<ProtectedRoute><StoreListPage /></ProtectedRoute>} />
+          <Route path="/stores/new" element={<ProtectedRoute><StoreCreatePage /></ProtectedRoute>} />
+          <Route path="/stores/:id/edit" element={<ProtectedRoute><StoreEditPage /></ProtectedRoute>} />
           {/* ShoppingRecord Routes */}
-          <Route path="/shopping-records" element={<ShoppingRecordListPage />} />
-          <Route path="/shopping-records/new" element={<ShoppingRecordCreatePage />} />
-          <Route path="/shopping-records/:id/edit" element={<ShoppingRecordEditPage />} />
+          <Route path="/shopping-records" element={<ProtectedRoute><ShoppingRecordListPage /></ProtectedRoute>} />
+          <Route path="/shopping-records/new" element={<ProtectedRoute><ShoppingRecordCreatePage /></ProtectedRoute>} />
+          <Route path="/shopping-records/:id/edit" element={<ProtectedRoute><ShoppingRecordEditPage /></ProtectedRoute>} />
         </Routes>
       </Box>
     </Box>
