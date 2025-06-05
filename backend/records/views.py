@@ -1,5 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from .models import Category, Manufacturer, Origin, Product, ShoppingRecord, Store, Unit
 from .serializers import (
@@ -10,7 +12,20 @@ from .serializers import (
     ShoppingRecordSerializer,
     StoreSerializer,
     UnitSerializer,
+    UserSerializer,
 )
+
+
+class UserDetailView(APIView):
+    """
+    API endpoint that allows users to be viewed.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
 
 
 class CategoryViewSet(viewsets.ModelViewSet):
