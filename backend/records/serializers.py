@@ -1,6 +1,17 @@
+from django.contrib.auth.models import User
 from rest_framework import serializers
 
 from .models import Category, Manufacturer, Origin, Product, ShoppingRecord, Store, Unit
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """
+    Serializer for User model.
+    """
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "email"]
 
 
 class CategorySerializer(serializers.ModelSerializer):
