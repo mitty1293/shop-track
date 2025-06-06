@@ -84,20 +84,21 @@ WSGI_APPLICATION = "shoptrack.wsgi.application"
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 # https://pypi.org/project/dj-database-url/
 
-DATABASES = {
-    "default": dj_database_url.config(
-        default=os.environ.get("DATABASE_URL"),
-        conn_max_age=600,
-        ssl_require=True,
-    )
-}
-
-# DATABASES = {
-#     "default": {
-#         "ENGINE": "django.db.backends.sqlite3",
-#         "NAME": BASE_DIR / "db.sqlite3",
-#     }
-# }
+if DEBUG:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
+else:
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=os.environ.get("DATABASE_URL"),
+            conn_max_age=600,
+            ssl_require=True,
+        )
+    }
 
 
 # Password validation
