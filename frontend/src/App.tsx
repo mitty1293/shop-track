@@ -149,6 +149,7 @@ function App() {
           <Typography variant="h6" noWrap component="div">
             ShopTrack Admin
           </Typography>
+          <Box sx={{ flexGrow: 1 }} />
           {auth.isAuthenticated && auth.user && (
             <Typography sx={{ mr: 2 }}>User: {auth.user.username}</Typography>
           )}

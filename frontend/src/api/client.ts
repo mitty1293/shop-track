@@ -44,7 +44,6 @@ const processQueue = (error: AxiosError | null, token: string | null = null) => 
     });
     failedQueue = [];
 };
-
 axiosInstance.interceptors.response.use(
     (response) => {
         return response; // 正常なレスポンスはそのまま返す
@@ -81,6 +80,7 @@ axiosInstance.interceptors.response.use(
             }
 
             try {
+                // リフレッシュAPIを直接呼び出し
                 const refreshResponse = await axios.post<RefreshTokenResponse>(`${API_BASE_URL}/api/auth/token/refresh/`, {
                     refresh: refreshTokenValue,
                 });
@@ -138,15 +138,21 @@ export const loginUser = async (credentials: LoginCredentials): Promise<TokenRes
     return response.data;
 };
 
-/** リフレッシュトークンを使い、新しいアクセストークンを取得する */
-export const refreshTokenApi = async (refreshTokenValue: string): Promise<RefreshTokenResponse> => {
-    const response = await axiosInstance.post<RefreshTokenResponse>('/api/auth/token/refresh/', { refresh: refreshTokenValue });
-    return response.data;
-};
+/**
+ * リフレッシュトークンを使い、新しいアクセストークンを取得する
+ * この関数は現在、axiosのレスポンスインターセプター内で直接リフレッシュ処理が
+ * 実装されているため、アプリケーションコードからは直接呼び出されていません。
+ * (レスポンスインターセプター: 401エラー時のトークンリフレッシュ処理 の リフレッシュAPIを直接呼び出ししている箇所)
+ * 将来的に手動でのトークンリフレッシュ機能などを実装する場合のために残しています。
+ */
+// export const refreshTokenApi = async (refreshTokenValue: string): Promise<RefreshTokenResponse> => {
+//     const response = await axiosInstance.post<RefreshTokenResponse>('/api/auth/token/refresh/', { refresh: refreshTokenValue });
+//     return response.data;
+// };
 
 // ユーザープロファイルを取得する
 export const fetchUserProfile = async (): Promise<User> => {
-    const response = await axiosInstance.get<User>('/api/auth/user/'); // 仮のエンドポイント
+    const response = await axiosInstance.get<User>('/api/auth/user/');
     return response.data;
 };
 
