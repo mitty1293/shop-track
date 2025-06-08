@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useNavigate } from 'react-router';
-import { loginUser, fetchUserProfile, LoginCredentials, User} from '../api/client';
+import { axiosInstance, loginUser, logoutUser, fetchUserProfile, LoginCredentials, User} from '../api/client';
 
 interface AuthContextType {
     isAuthenticated: boolean;
@@ -23,67 +23,87 @@ interface AuthProviderProps {
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [user, setUser] = useState<User | null>(null);
-    const [accessToken, setAccessToken] = useState<string | null>(localStorage.getItem('accessToken'));
+    const [accessToken, setAccessToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true); // 初期表示時はtrue
     const navigate = useNavigate();
 
-    // リフレッシュトークンを保存する場所 (localStorage)
-    const REFRESH_TOKEN_KEY = 'refreshToken';
-
-    // アクセストークンを保存する場所 (メモリ上、または短期間ならlocalStorageも可)
-    // メモリ上で管理し、ページリロード時はリフレッシュトークンから再取得する想定
-    const ACCESS_TOKEN_KEY = 'accessToken'; // localStorageに保存する場合のキー
+    // アクセストークンの変更を監視し、axiosのデフォルトヘッダーを更新
+    useEffect(() => {
+        if (accessToken) {
+            axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+        } else {
+            delete axiosInstance.defaults.headers.common['Authorization'];
+        }
+    }, [accessToken]);
 
     // ユーザー情報を取得してstateにセットする関数
-    const fetchAndSetUser = async () => {
+    const fetchAndSetUser = useCallback(async () => {
         try {
             const userProfile = await fetchUserProfile();
             setUser(userProfile);
             console.log('User profile fetched successfully:', userProfile);
         } catch (error) {
             console.error('Failed to fetch user profile', error);
-            throw error;
+            // ユーザー情報が取得できなければトークンを無効化
+            setAccessToken(null);
+            setUser(null);
         }
-    };
+    }, []);
 
     // ログアウト処理
-    const logout = useCallback(() => {
+    const logout = useCallback(async () => {
         console.log('Attempting to logout...');
-        setUser(null);
-        setAccessToken(null);
-        localStorage.removeItem(REFRESH_TOKEN_KEY);
-        localStorage.removeItem(ACCESS_TOKEN_KEY);
-        console.log('User logged out from AuthContext.');
-        navigate('/login', { replace: true });
+        try {
+            await logoutUser();
+        } catch (error) {
+            console.error('Failed to logout user', error);
+        } finally {
+            // API呼び出しの成否に関わらずフロントエンドの状態をクリア
+            setUser(null);
+            setAccessToken(null);
+            console.log('User logged out from AuthContext.');
+            navigate('/login', { replace: true });
+        }
     }, [navigate]);
 
-    // アプリケーション初期化時にトークンを確認し、ユーザー情報を取得する
+    // アプリケーション初期化時にサイレントリフレッシュを試みる
     useEffect(() => {
         const initializeAuth = async () => {
             setIsLoading(true);
-            const storedAccessToken = localStorage.getItem(ACCESS_TOKEN_KEY);
-
-            if (storedAccessToken) {
-                setAccessToken(storedAccessToken);
-                try {
+            try {
+                const response = await axiosInstance.post<{ access: string }>('/api/auth/token/refresh/');
+                const newAccessToken = response.data.access;
+                if (newAccessToken) {
+                    setAccessToken(newAccessToken);
                     await fetchAndSetUser();
-                } catch (error) {
-                    console.log("Access token might be expired, trying to refresh...");
                 }
+            } catch (error) {
+                console.log('No active session or refresh failed.');
+            } finally {
+                setIsLoading(false); // 初期化処理の完了
             }
-            setIsLoading(false); // 初期化処理の完了
         };
         initializeAuth();
+    }, [fetchAndSetUser]);
+
+    // トークンがリフレッシュされたグローバルイベントをリッスン
+    useEffect(() => {
+        const handleTokenRefreshed = (event: Event) => {
+            const { accessToken: newAccessToken } = (event as CustomEvent).detail;
+            console.log("Token refreshed via interceptor, updating AuthContext.");
+            setAccessToken(newAccessToken);
+        };
+        window.addEventListener('token-refreshed', handleTokenRefreshed);
+        return () => {
+            window.removeEventListener('token-refreshed', handleTokenRefreshed);
+        };
     }, []);
 
     // 'auth-error' イベントをリッスンしてログアウトを実行
     useEffect(() => {
-        const handleAuthErrorEvent = (event: Event) => {
-            console.log('Global auth-error event received in AuthContext. Logging out.', (event as CustomEvent).detail);
+        const handleAuthErrorEvent = () => {
+            console.log('Global auth-error event received. Logging out.');
             logout();
-            // ここでユーザーにセッション切れを通知するトーストなどを表示するのも良い
-            // 強制的にログインページに遷移
-            window.location.href = '/login';
         };
         window.addEventListener('auth-error', handleAuthErrorEvent);
         return () => {
@@ -96,9 +116,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsLoading(true);
         try {
             const tokenData = await loginUser(credentials);
-            localStorage.setItem(ACCESS_TOKEN_KEY, tokenData.access);
-            localStorage.setItem(REFRESH_TOKEN_KEY, tokenData.refresh);
-            setAccessToken(tokenData.access);
+            const newAccessToken = tokenData.access;
+
+            // 先にaxiosのヘッダーを直接更新する
+            axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
+            // その後でReactのstateを更新
+            setAccessToken(newAccessToken);
+            // これで、次のAPI呼び出しはヘッダーが付与された状態で実行される
             await fetchAndSetUser(); // ログイン成功後、ユーザー情報を取得
         } catch (error) {
             setIsLoading(false);

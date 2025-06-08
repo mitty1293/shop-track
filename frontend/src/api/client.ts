@@ -6,30 +6,13 @@ if (API_BASE_URL === undefined) {
     throw new Error("VITE_API_BASE_URL is not defined. Please check your .env file.");
 }
 
-const axiosInstance = axios.create({
+export const axiosInstance = axios.create({
     baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
     },
+    withCredentials: true,
 });
-
-// リクエストインターセプター: ヘッダーにアクセストークンを付与
-axiosInstance.interceptors.request.use(
-    (config: InternalAxiosRequestConfig) => {
-        // localStorage からアクセストークンを取得 (AuthContext とキーを合わせる)
-        const accessToken = localStorage.getItem('accessToken');
-        if (accessToken && config.headers) {
-            // ログインやトークンリフレッシュのエンドポイントには Authorization ヘッダーを付与しない
-            if (!config.url?.includes('/auth/token')) {
-                config.headers.Authorization = `Bearer ${accessToken}`;
-            }
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
 
 // レスポンスインターセプター: 401エラー時のトークンリフレッシュ処理
 let isRefreshing = false; // トークンリフレッシュ中かどうかのフラグ
@@ -70,31 +53,17 @@ axiosInstance.interceptors.response.use(
             originalRequest._retry = true; // 再試行フラグを立てる (無限ループ防止)
             isRefreshing = true;
 
-            const refreshTokenValue = localStorage.getItem('refreshToken');
-            if (!refreshTokenValue) {
-                console.log('No refresh token found, redirecting to login.');
-                // ここで AuthContext の logout を呼び出すか、グローバルイベントを発行
-                window.dispatchEvent(new CustomEvent('auth-error', { detail: { reason: 'no-refresh-token' } }));
-                isRefreshing = false;
-                return Promise.reject(error);
-            }
-
             try {
-                // リフレッシュAPIを直接呼び出し
-                const refreshResponse = await axios.post<RefreshTokenResponse>(`${API_BASE_URL}/api/auth/token/refresh/`, {
-                    refresh: refreshTokenValue,
-                });
-
+                // リフレッシュAPIにはボディなしでリクエスト
+                const refreshResponse = await axiosInstance.post<RefreshTokenResponse>(`/api/auth/token/refresh/`, {});
                 const newAccessToken = refreshResponse.data.access;
-                localStorage.setItem('accessToken', newAccessToken); // 新しいアクセストークンを保存
-                if (axiosInstance.defaults.headers.common) {
-                    axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newAccessToken}`;
-                } else if (originalRequest.headers) { // フォールバック
-                    originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
-                }
+
+                // 新しいトークンをAuthContextに通知するためのイベントを発行
+                window.dispatchEvent(new CustomEvent('token-refreshed', { detail: { accessToken: newAccessToken } }));
 
                 processQueue(null, newAccessToken); // キューに溜まったリクエストを処理
                 isRefreshing = false;
+
                 // 元のリクエストのヘッダーも更新して再試行
                 if (originalRequest.headers) {
                     originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
@@ -104,7 +73,7 @@ axiosInstance.interceptors.response.use(
                 console.error('Token refresh failed in interceptor:', refreshError);
                 processQueue(refreshError as AxiosError, null); // キューに溜まったリクエストをエラーで処理
                 isRefreshing = false;
-                // ここで AuthContext の logout を呼び出すか、グローバルイベントを発行
+                // 認証エラーイベントを発行
                 window.dispatchEvent(new CustomEvent('auth-error', { detail: { reason: 'refresh-failed' } }));
                 return Promise.reject(refreshError);
             }
@@ -117,7 +86,6 @@ axiosInstance.interceptors.response.use(
 // --- 認証関連のAPI関数 ---
 export interface TokenResponse {
     access: string;
-    refresh: string;
 }
 export interface LoginCredentials {
     username: string;
@@ -138,17 +106,10 @@ export const loginUser = async (credentials: LoginCredentials): Promise<TokenRes
     return response.data;
 };
 
-/**
- * リフレッシュトークンを使い、新しいアクセストークンを取得する
- * この関数は現在、axiosのレスポンスインターセプター内で直接リフレッシュ処理が
- * 実装されているため、アプリケーションコードからは直接呼び出されていません。
- * (レスポンスインターセプター: 401エラー時のトークンリフレッシュ処理 の リフレッシュAPIを直接呼び出ししている箇所)
- * 将来的に手動でのトークンリフレッシュ機能などを実装する場合のために残しています。
- */
-// export const refreshTokenApi = async (refreshTokenValue: string): Promise<RefreshTokenResponse> => {
-//     const response = await axiosInstance.post<RefreshTokenResponse>('/api/auth/token/refresh/', { refresh: refreshTokenValue });
-//     return response.data;
-// };
+// ログアウト
+export const logoutUser = async (): Promise<void> => {
+    await axiosInstance.post('/api/auth/logout/');
+};
 
 // ユーザープロファイルを取得する
 export const fetchUserProfile = async (): Promise<User> => {

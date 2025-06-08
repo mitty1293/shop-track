@@ -184,9 +184,8 @@ if not DEBUG:
 # CORS settings
 # https://pypi.org/project/django-cors-headers/
 
-if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = True
-else:
-    CORS_ALLOWED_ORIGINS = [
-        "https://shoptrack.fmitty.net",
-    ]
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOWED_ORIGINS = (
+    ["http://localhost:5173", "http://127.0.0.1:5173"] if DEBUG else ["https://shoptrack.fmitty.net"]
+)
