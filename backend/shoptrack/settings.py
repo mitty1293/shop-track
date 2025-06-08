@@ -170,6 +170,7 @@ SPECTACULAR_SETTINGS = {
 # https://docs.djangoproject.com/en/5.0/ref/settings/#secure-hsts-seconds
 # https://docs.djangoproject.com/en/5.0/ref/settings/#secure-hsts-include-subdomains
 # https://docs.djangoproject.com/en/5.0/ref/settings/#secure-hsts-preload
+
 if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     USE_X_FORWARDED_HOST = True
@@ -182,7 +183,13 @@ if not DEBUG:
 
 # CORS settings
 # https://pypi.org/project/django-cors-headers/
-# CORS_ALLOWED_ORIGINS = [
-#     "https://shoptrack.fmitty.net",
-# ]
-CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOW_CREDENTIALS = True
+
+if DEBUG:
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+else:
+    CORS_ALLOWED_ORIGINS = ["https://shoptrack.fmitty.net"]
