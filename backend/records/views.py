@@ -74,7 +74,7 @@ class CookieTokenRefreshView(TokenRefreshView):
         except (InvalidToken, TokenError) as e:
             # トークンが無効な場合、クッキーを削除してエラーを返す
             err_response = Response({"detail": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
-            err_response.delete_cookie("refresh_token")
+            err_response.delete_cookie("refresh_token", path="/api/auth/")
             return err_response
 
         # レスポンスに新しいアクセストークンが含まれる
@@ -88,7 +88,7 @@ class LogoutView(APIView):
 
     def post(self, request, *args, **kwargs):
         response = Response({"detail": "Successfully logged out."}, status=status.HTTP_200_OK)
-        response.delete_cookie("refresh_token")
+        response.delete_cookie("refresh_token", path="/api/auth/")
         return response
 
 
