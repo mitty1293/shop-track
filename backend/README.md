@@ -27,6 +27,10 @@ Setting up environment variables correctly is crucial before deploying the appli
     * **`DJANGO_ALLOWED_HOSTS`**:
         * For **local development**, `localhost, 127.0.0.1` might be sufficient.
         * For **other development**, set this to the actual domain name(s) or IP addresses from which your application will be served (e.g., `yourdomain.com, www.yourdomain.com`).
+    * **`DJANGO_CORS_ALLOWED_ORIGINS`**:
+        * A comma-separated list of origins that are authorized to make cross-site HTTP requests.
+        * For **local development**, the default is `http://localhost:5173,http://127.0.0.1:5173`.
+        * For **production**, set this to the full origin of your frontend application (e.g., `https://yourdomain.com, https://www.yourdomain.com`).
     * **`DATABASE_URL`** (or individual DB settings):
         * Configure the database connection details appropriate for the target environment (local database, production database instance, etc.).
     * **Other Variables**: Adjust any other variables present in the `.env` file as required by the specific deployment environment.
