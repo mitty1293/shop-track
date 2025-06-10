@@ -29,7 +29,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() == "true"
 
 allowed_hosts_env = os.environ.get("DJANGO_ALLOWED_HOSTS", "127.0.0.1,localhost")
-ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(",")]
+ALLOWED_HOSTS = [host.strip() for host in allowed_hosts_env.split(",") if host.strip()]
 
 
 # Application definition
@@ -186,10 +186,5 @@ if not DEBUG:
 
 CORS_ALLOW_CREDENTIALS = True
 
-if DEBUG:
-    CORS_ALLOWED_ORIGINS = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ]
-else:
-    CORS_ALLOWED_ORIGINS = ["https://shoptrack.fmitty.net"]
+cors_allowed_origins_env = os.environ.get("DJANGO_CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_allowed_origins_env.split(",") if origin.strip()]
