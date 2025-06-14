@@ -2,11 +2,6 @@ import React from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-    Product,
-    Category,
-    Unit,
-    Manufacturer,
-    Origin,
     PatchedProductInput,
     getProductById,
     updateProduct,
