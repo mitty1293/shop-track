@@ -7,7 +7,6 @@ import {
     getManufacturers,
     getOrigins,
     createProduct,
-    ProductInput,
     PatchedProductInput,
 } from '../api/client';
 import ProductForm from '../components/ProductForm';
