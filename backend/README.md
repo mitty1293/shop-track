@@ -40,14 +40,14 @@ Setting up environment variables correctly is crucial before deploying the appli
 ### 2. Deployment by Environment
 Once the `.env` file for your target environment is ready, proceed with the specific deployment instructions below.
 
-#### A. Local Development Environment (using Docker rye)
+#### A. 💻 Local Development Environment (using Docker rye)
 ```
 rye sync
 rye run migrate
 rye run devserver
 ```
 
-#### B. Local Development Environment (using Docker Compose)
+#### B. 🐳 Local Development Environment (using Docker Compose)
 
 These steps describe how to run the application locally for development purposes.
 
@@ -62,13 +62,13 @@ These steps describe how to run the application locally for development purposes
     docker compose down
     ```
 
-#### C. Production Environment (Example using Docker Compose & traefik)
+#### C. 🚀 Production Environment (Example using Docker Compose & traefik)
 1.  **Environment:** Verify your `.env` file is configured for production development (e.g., `DEBUG=False`).
 2.  **Run:** Navigate to the project root directory (where `compose.traefik.yml` is located) and run:
     ```bash
     docker compose -f compose.traefik.yml up -d
     ```
-3.  **Access:** The application should typically be available at `https://shoptrack.${HOST_DOMAIN}`.
+3.  **Access:** The application should typically be available at `https://shoptrack-backend.${HOST_DOMAIN}`.
 4.  **Stopping:** To stop the running services:
     ```bash
     docker compose -f compose.traefik.yml down
