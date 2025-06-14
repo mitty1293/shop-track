@@ -1,20 +1,12 @@
-FROM node:16-alpine as build-stage
-
+FROM node:24.2.0 as build-stage
 WORKDIR /app
-
 COPY package.json package-lock.json ./
 RUN npm install
-
 COPY . .
-
 RUN npm run build
 
-FROM nginx:alpine
-
+FROM nginx:1.27.5
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-
 COPY --from=build-stage /app/dist /usr/share/nginx/html
-
 EXPOSE 80
-
 CMD ["nginx", "-g", "daemon off;"]
