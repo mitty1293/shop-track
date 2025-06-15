@@ -7,7 +7,6 @@ import {
     getProducts,
     getStores,
     createShoppingRecord,
-    ShoppingRecordInput,
     PatchedShoppingRecordInput
 } from '../api/client';
 import ShoppingRecordForm from '../components/ShoppingRecordForm';

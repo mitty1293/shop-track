@@ -1,0 +1,9 @@
+services:
+  shoptrack-frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: shoptrack-frontend
+    container_name: shoptrack-frontend
+    ports:
+      - "5173:80"
