@@ -1,9 +1,6 @@
 services:
   shoptrack-backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: shoptrack-backend
+    image: registry-fmitty.sakuracr.jp/shoptrack-backend:latest
     container_name: shoptrack-backend
     env_file:
       - .env
