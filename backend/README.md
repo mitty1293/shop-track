@@ -63,8 +63,23 @@ These steps describe how to run the application locally for development purposes
     ```
 
 #### C. 🚀 Production Environment (Example using Docker Compose & traefik)
-1.  **Environment:** Verify your `.env` file is configured for production development (e.g., `DEBUG=False`).
-2.  **Run:** Navigate to the project root directory (where `compose.traefik.yml` is located) and run:
+1.  **Build and Push from Local Machine**
+    1.  **Prepare Environment:** First, ensure your `.env` file is configured for production (e.g., `DEBUG=False`).
+    2.  **Login to Registry:** Log in to the container registry.
+        ```bash
+        docker login registry-fmitty.sakuracr.jp
+        ```
+    3.  **Build the Image:** Build the Docker image, tagging it with the registry's path.
+        ```bash
+        docker build -t registry-fmitty.sakuracr.jp/shoptrack-backend:latest .
+        ```
+    4.  **Push the Image:** Push the built image to the registry.
+        ```bash
+        docker push registry-fmitty.sakuracr.jp/shoptrack-backend:latest
+        ```
+2.  **Run on Deployment Server**
+    Navigate to the `backend` project root directory (where `compose.traefik.yml` is located) and run the following command.  
+    This will pull the image from the registry and start the application.
     ```bash
     docker compose -f compose.traefik.yml up -d
     ```
