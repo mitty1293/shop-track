@@ -33,6 +33,10 @@ Setting up environment variables correctly is crucial before deploying the appli
         * For **production**, set this to the full origin of your frontend application (e.g., `https://yourdomain.com, https://www.yourdomain.com`).
     * **`DATABASE_URL`** (or individual DB settings):
         * Configure the database connection details appropriate for the target environment (local database, production database instance, etc.).
+    * **`CONTAINER_REGISTRY`**:
+        * The hostname of the container registry you are pushing to.
+    * **`IMAGE_TAG`**:
+        * The name and tag you want to assign to your built Docker image.
     * **Other Variables**: Adjust any other variables present in the `.env` file as required by the specific deployment environment.
 
     Save the changes to your `.env` file.
@@ -67,22 +71,22 @@ These steps describe how to run the application locally for development purposes
     1.  **Prepare Environment:** First, ensure your `.env` file is configured for production (e.g., `DEBUG=False`).
     2.  **Login to Registry:** Log in to the container registry.
         ```bash
-        docker login registry-fmitty.sakuracr.jp
+        docker login <CONTAINER_REGISTRY>
         ```
     3.  **Build the Image:** Build the Docker image, tagging it with the registry's path.
         ```bash
-        docker build -t registry-fmitty.sakuracr.jp/shoptrack-backend:latest .
+        docker build -t <CONTAINER_REGISTRY>/shoptrack-backend:<IMAGE_TAG> .
         ```
     4.  **Push the Image:** Push the built image to the registry.
         ```bash
-        docker push registry-fmitty.sakuracr.jp/shoptrack-backend:latest
+        docker push <CONTAINER_REGISTRY>/shoptrack-backend:<IMAGE_TAG>
         ```
 2.  **Run on Deployment Server**
-    1.  **Prerequisite:** Before running the application, ensure the deployment server is authenticated with the container registry (`registry-fmitty.sakuracr.jp`).  
+    1.  **Prerequisite:** Before running the application, ensure the deployment server is authenticated with the container registry.  
         This is typically a one-time setup command performed during server provisioning.
         ```bash
         # (Example) Run this once when setting up the server
-        docker login registry-fmitty.sakuracr.jp
+        docker login <CONTAINER_REGISTRY>
         ```
     2.  **Run:** Navigate to the `frontend` project directory (where `compose.traefik.yml` is located) and run the following command.  
         This will pull the image from the registry and start the application.
