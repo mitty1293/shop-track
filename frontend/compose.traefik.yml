@@ -1,9 +1,6 @@
 services:
   shoptrack-frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: shoptrack-frontend
+    image: ${CONTAINER_REGISTRY}/shoptrack-frontend:${IMAGE_TAG:-latest}
     container_name: shoptrack-frontend
     networks:
       - traefik_reverse_proxy_network

@@ -33,6 +33,10 @@ Setting up environment variables correctly is crucial before deploying the appli
         * For **production**, set this to the full origin of your frontend application (e.g., `https://yourdomain.com, https://www.yourdomain.com`).
     * **`DATABASE_URL`** (or individual DB settings):
         * Configure the database connection details appropriate for the target environment (local database, production database instance, etc.).
+    * **`CONTAINER_REGISTRY`**:
+        * The hostname of the container registry you are pushing to.
+    * **`IMAGE_TAG`**:
+        * The name and tag you want to assign to your built Docker image.
     * **Other Variables**: Adjust any other variables present in the `.env` file as required by the specific deployment environment.
 
     Save the changes to your `.env` file.
@@ -63,11 +67,32 @@ These steps describe how to run the application locally for development purposes
     ```
 
 #### C. 🚀 Production Environment (Example using Docker Compose & traefik)
-1.  **Environment:** Verify your `.env` file is configured for production development (e.g., `DEBUG=False`).
-2.  **Run:** Navigate to the project root directory (where `compose.traefik.yml` is located) and run:
-    ```bash
-    docker compose -f compose.traefik.yml up -d
-    ```
+1.  **Build and Push from Local Machine**
+    1.  **Prepare Environment:** First, ensure your `.env` file is configured for production (e.g., `DEBUG=False`).
+    2.  **Login to Registry:** Log in to the container registry.
+        ```bash
+        docker login <CONTAINER_REGISTRY>
+        ```
+    3.  **Build the Image:** Build the Docker image, tagging it with the registry's path.
+        ```bash
+        docker build -t <CONTAINER_REGISTRY>/shoptrack-backend:<IMAGE_TAG> .
+        ```
+    4.  **Push the Image:** Push the built image to the registry.
+        ```bash
+        docker push <CONTAINER_REGISTRY>/shoptrack-backend:<IMAGE_TAG>
+        ```
+2.  **Run on Deployment Server**
+    1.  **Prerequisite:** Before running the application, ensure the deployment server is authenticated with the container registry.  
+        This is typically a one-time setup command performed during server provisioning.
+        ```bash
+        # (Example) Run this once when setting up the server
+        docker login <CONTAINER_REGISTRY>
+        ```
+    2.  **Run:** Navigate to the `frontend` project directory (where `compose.traefik.yml` is located) and run the following command.  
+        This will pull the image from the registry and start the application.
+        ```bash
+        docker compose -f compose.traefik.yml up -d
+        ```
 3.  **Access:** The application should typically be available at `https://shoptrack-backend.${HOST_DOMAIN}`.
 4.  **Stopping:** To stop the running services:
     ```bash
