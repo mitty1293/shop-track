@@ -72,11 +72,17 @@ Once the container is up and running, open your browser and go to:
         docker push registry-fmitty.sakuracr.jp/shoptrack-frontend:latest
         ```
 2.  **Run on Deployment Server**
-    Navigate to the `frontend` project directory (where `compose.traefik.yml` is located) and run the following command.  
-    This will pull the image from the registry and start the application.
-    ```bash
-    docker compose -f compose.traefik.yml up -d
-    ```
+    1.  **Prerequisite:** Before running the application, ensure the deployment server is authenticated with the container registry (`registry-fmitty.sakuracr.jp`).  
+        This is typically a one-time setup command performed during server provisioning.
+        ```bash
+        # (Example) Run this once when setting up the server
+        docker login registry-fmitty.sakuracr.jp
+        ```
+    2.  **Run:** Navigate to the `frontend` project directory (where `compose.traefik.yml` is located) and run the following command.  
+        This will pull the image from the registry and start the application.
+        ```bash
+        docker compose -f compose.traefik.yml up -d
+        ```
 3.  **Access:** The application should typically be available at `https://shoptrack-frontend.${HOST_DOMAIN}`.
 
 4.  **Stopping:** To stop the running services:
