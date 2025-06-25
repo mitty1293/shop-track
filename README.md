@@ -54,7 +54,7 @@ shop-track/
 
 For detailed instructions on how to set up, configure, and run each part of the application, please refer to the `README.md` files within their respective directories.
 
-  * **Backend Setup**: [backend/README.md]
-  * **Frontend Setup**: [frontend/README.md]
+  * **Backend Setup**: [backend/README.md](backend/README.md)
+  * **Frontend Setup**: [frontend/README.md](frontend/README.md)
 
 Each `README.md` provides environment-specific guides for local development (with and without Docker) and production deployment.
