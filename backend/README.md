@@ -45,7 +45,10 @@ Setting up environment variables correctly is crucial before deploying the appli
 Once the `.env` file for your target environment is ready, proceed with the specific deployment instructions below.
 
 #### A. 💻 Local Development Environment (using Docker rye)
-```
+
+1.  **Environment:** Verify your `.env` file is configured for local development (e.g., `DEBUG=True`, local database connection).
+2.  **Run:** Navigate to the project root directory (where `pyproject.toml` is located) and run:
+```bash
 rye sync
 rye run migrate
 rye run devserver
@@ -68,16 +71,15 @@ These steps describe how to run the application locally for development purposes
 
 #### C. 🚀 Production Environment (Example using Docker Compose & traefik)
 1.  **Build and Push from Local Machine**
-    1.  **Prepare Environment:** First, ensure your `.env` file is configured for production (e.g., `DEBUG=False`).
-    2.  **Login to Registry:** Log in to the container registry.
+    1.  **Login to Registry:** Log in to the container registry.
         ```bash
         docker login <CONTAINER_REGISTRY>
         ```
-    3.  **Build the Image:** Build the Docker image, tagging it with the registry's path.
+    2.  **Build the Image:** Build the Docker image, tagging it with the registry's path.
         ```bash
         docker build -t <CONTAINER_REGISTRY>/shoptrack-backend:<IMAGE_TAG> .
         ```
-    4.  **Push the Image:** Push the built image to the registry.
+    3.  **Push the Image:** Push the built image to the registry.
         ```bash
         docker push <CONTAINER_REGISTRY>/shoptrack-backend:<IMAGE_TAG>
         ```
@@ -88,7 +90,8 @@ These steps describe how to run the application locally for development purposes
         # (Example) Run this once when setting up the server
         docker login <CONTAINER_REGISTRY>
         ```
-    2.  **Run:** Navigate to the `frontend` project directory (where `compose.traefik.yml` is located) and run the following command.  
+    2.  **Prepare Environment:** First, ensure your `.env` file is configured for production (e.g., `DEBUG=False`).
+    3.  **Run:** Navigate to the `frontend` project directory (where `compose.traefik.yml` is located) and run the following command.  
         This will pull the image from the registry and start the application.
         ```bash
         docker compose -f compose.traefik.yml up -d
