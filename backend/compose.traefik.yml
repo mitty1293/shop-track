@@ -1,6 +1,6 @@
 services:
   shoptrack-backend:
-    image: ${CONTAINER_REGISTRY}/shoptrack-backend:${IMAGE_TAG:-latest}
+    image: ${CONTAINER_REGISTRY_URL}/shoptrack-backend:${IMAGE_TAG:-latest}
     container_name: shoptrack-backend
     env_file:
       - .env

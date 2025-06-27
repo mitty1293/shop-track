@@ -64,29 +64,29 @@ Once the container is up and running, open your browser and go to:
     * **`VITE_API_BASE_URL`**:
         * The full base URL for the backend API. The frontend application will send all its API requests to this address.
         * Vite will automatically use this variable during the build process.
-    * **`CONTAINER_REGISTRY`**:
+    * **`CONTAINER_REGISTRY_URL`**:
         * The hostname of the container registry you are pushing to.
     * **`IMAGE_TAG`**:
         * The name and tag you want to assign to your built Docker image.
 
     2.  **Login to Registry:** Log in to the container registry.
         ```bash
-        docker login <CONTAINER_REGISTRY>
+        docker login <CONTAINER_REGISTRY_URL>
         ```
     3.  **Build the Image:** Build the Docker image, tagging it with the registry's path.
         ```bash
-        docker build -t <CONTAINER_REGISTRY>/shoptrack-frontend:<IMAGE_TAG> .
+        docker build -t <CONTAINER_REGISTRY_URL>/shoptrack-frontend:<IMAGE_TAG> .
         ```
     4.  **Push the Image:** Push the built image to the registry.
         ```bash
-        docker push <CONTAINER_REGISTRY>/shoptrack-frontend:<IMAGE_TAG>
+        docker push <CONTAINER_REGISTRY_URL>/shoptrack-frontend:<IMAGE_TAG>
         ```
 2.  **Run on Deployment Server**
     1.  **Prerequisite:** Before running the application, ensure the deployment server is authenticated with the container registry.  
         This is typically a one-time setup command performed during server provisioning.
         ```bash
         # (Example) Run this once when setting up the server
-        docker login <CONTAINER_REGISTRY>
+        docker login <CONTAINER_REGISTRY_URL>
         ```
     2.  **Run:** Navigate to the `frontend` project directory (where `compose.traefik.yml` is located) and run the following command.  
         This will pull the image from the registry and start the application.
