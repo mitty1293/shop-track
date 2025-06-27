@@ -33,6 +33,7 @@ Setting up environment variables correctly is crucial before deploying the appli
         * For **production**, set this to the full origin of your frontend application (e.g., `https://yourdomain.com, https://www.yourdomain.com`).
     * **`DATABASE_URL`** (or individual DB settings):
         * Configure the database connection details appropriate for the target environment (local database, production database instance, etc.).
+        * If DEBUG=True, SQLite is used regardless of the setting value. (see `shoptrack/settings.py`)
     * **`CONTAINER_REGISTRY`**:
         * The hostname of the container registry you are pushing to.
     * **`IMAGE_TAG`**:
@@ -91,7 +92,7 @@ These steps describe how to run the application locally for development purposes
         docker login <CONTAINER_REGISTRY>
         ```
     2.  **Prepare Environment:** First, ensure your `.env` file is configured for production (e.g., `DEBUG=False`).
-    3.  **Run:** Navigate to the `frontend` project directory (where `compose.traefik.yml` is located) and run the following command.  
+    3.  **Run:** Navigate to the `backend` project directory (where `compose.traefik.yml` is located) and run the following command.  
         This will pull the image from the registry and start the application.
         ```bash
         docker compose -f compose.traefik.yml up -d
