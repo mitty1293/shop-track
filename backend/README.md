@@ -23,6 +23,10 @@ Setting up environment variables correctly is crucial before deploying the appli
             ```bash
             python -c "import string, secrets; allowed_chars = string.ascii_letters + string.digits + '@#$%^&*(-_=+)'; print(''.join(secrets.choice(allowed_chars) for _ in range(50)))"
             ```
+        * If python is not installed:
+            ```bash
+            head /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&*(-_=+)' | head -c 50
+            ```
         * Copy the full output of this command and paste it as the value for `DJANGO_SECRET_KEY` in your `.env` file.
     * **`DJANGO_ALLOWED_HOSTS`**:
         * For **local development**, `localhost, 127.0.0.1` might be sufficient.
