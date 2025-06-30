@@ -1,0 +1,40 @@
+name: Test Backend
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - '.github/workflows/test-backend.yml'
+
+jobs:
+  test:
+    name: Run backend tests
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Rye
+        run: |
+          curl -sSf https://rye.astral.sh/get | bash -s -- --yes
+          echo "$HOME/.rye/shims" >> $GITHUB_PATH
+        shell: bash
+
+      - name: Install dependencies
+        run: rye sync
+
+      - name: Run tests
+        run: rye run test
+        env:
+          DJANGO_DEBUG: "True"
+          DJANGO_SECRET_KEY: "dummy-secret-key-for-github-actions-testing"
