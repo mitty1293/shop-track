@@ -1,5 +1,6 @@
 from datetime import date
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
@@ -87,6 +88,8 @@ class ShoppingRecordModelTest(TestCase):
 class CategoryAPITest(APITestCase):
     def setUp(self):
         self.client = APIClient()
+        self.user = get_user_model().objects.create_user(username="testuser", password="testpassword")
+        self.client.force_authenticate(user=self.user)
         self.category_data = {"name": "Vegetables"}
         self.response = self.client.post("/api/categories/", self.category_data, format="json")
 
@@ -103,6 +106,8 @@ class CategoryAPITest(APITestCase):
 class ShoppingRecordAPITest(APITestCase):
     def setUp(self):
         self.client = APIClient()
+        self.user = get_user_model().objects.create_user(username="testuser", password="testpassword")
+        self.client.force_authenticate(user=self.user)
         self.shopping_record_data = {
             "price": 1000,
             "purchase_date": date(2024, 1, 1),
