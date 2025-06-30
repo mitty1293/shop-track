@@ -27,8 +27,12 @@ jobs:
       - name: Install dependencies
         run: rye sync
 
+      - name: Create .env file
+        run: |
+          cat << EOF > .env
+          DJANGO_DEBUG=True
+          DJANGO_SECRET_KEY=dummy-secret-key-for-github-actions-testing
+          EOF
+
       - name: Run tests
         run: rye run test
-        env:
-          DJANGO_DEBUG: "True"
-          DJANGO_SECRET_KEY: "dummy-secret-key-for-github-actions-testing"
