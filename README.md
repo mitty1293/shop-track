@@ -1,3 +1,5 @@
+[![Test Backend](https://github.com/mitty1293/shop-track/actions/workflows/test-backend.yml/badge.svg)](https://github.com/mitty1293/shop-track/actions/workflows/test-backend.yml)
+
 # shop-track
 
 ShopTrack is a full-stack web application designed to help you record and manage your daily shopping expenses. It features a separate backend API and a responsive frontend user interface, containerized with Docker for easy setup and deployment.

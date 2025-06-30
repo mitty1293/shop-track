@@ -1,3 +1,5 @@
+[![Test Backend](https://github.com/mitty1293/shop-track/actions/workflows/test-backend.yml/badge.svg)](https://github.com/mitty1293/shop-track/actions/workflows/test-backend.yml)
+
 # backend
 
 ## Deployment
