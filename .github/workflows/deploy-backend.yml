@@ -1,0 +1,87 @@
+name: Deploy Backend
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  build_and_push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.CONTAINER_REGISTRY_URL }}
+          username: ${{ secrets.CONTAINER_REGISTRY_USERNAME }}
+          password: ${{ secrets.CONTAINER_REGISTRY_PASSWORD }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ vars.CONTAINER_REGISTRY_URL }}/shoptrack-backend
+          tags: |
+            type=semver,pattern={{version}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    name: Deploy to Server
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Django Secret Key
+        id: secret_key
+        run: echo "key=$(head /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&*(-_=+)' | head -c 50)" >> $GITHUB_OUTPUT
+
+      - name: Create .env file
+        id: create_env
+        run: |
+          echo "Writing .env file content..."
+          cat << EOF > .env
+          DJANGO_DEBUG=False
+          DJANGO_SECRET_KEY=${{ steps.secret_key.outputs.key }}
+          DJANGO_ALLOWED_HOSTS=${{ vars.DJANGO_ALLOWED_HOSTS }}
+          DJANGO_CORS_ALLOWED_ORIGINS=${{ vars.DJANGO_CORS_ALLOWED_ORIGINS }}
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          CONTAINER_REGISTRY_URL=${{ vars.CONTAINER_REGISTRY_URL }}
+          IMAGE_TAG=${{ github.ref_name }}
+          EOF
+
+      - name: Copy .env file to server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_SERVER_HOST }}
+          username: ${{ secrets.DEPLOY_SERVER_USERNAME }}
+          key: ${{ secrets.DEPLOY_SERVER_PRIVATE_KEY }}
+          source: ".env"
+          target: "~/shop-track/backend/"
+
+      - name: Run deployment commands
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_SERVER_HOST }}
+          username: ${{ secrets.DEPLOY_SERVER_USERNAME }}
+          key: ${{ secrets.DEPLOY_SERVER_PRIVATE_KEY }}
+          script: |
+            cd ~/shop-track
+            echo ">>> Pulling latest code..."
+            git pull
+            git fetch --tags
+            echo ">>> Restarting services with new image..."
+            docker compose -f backend/compose.traefik.yml pull
+            docker compose -f backend/compose.traefik.yml up -d --force-recreate --remove-orphans
+            echo ">>> Deployment finished successfully!"
