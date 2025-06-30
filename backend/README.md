@@ -46,7 +46,7 @@ Setting up environment variables correctly is crucial before deploying the appli
         * Check the value in repository's GitHub Variables and set it.
     * **`IMAGE_TAG`**:
         * The name and tag you want to assign to your built Docker image.
-        * Get the latest tag name to be deployed by running the following command on the server.:
+        * Get the latest tag name to be deployed by running the following command on the server:
             ```bash
             git describe --tags --abbrev=0
             ```
@@ -113,13 +113,13 @@ This section describes the manual deployment procedure for **emergency situation
         ```bash
         docker login ${CONTAINER_REGISTRY_URL}
         ```
-    2.  **Build the Image:** Build the Docker image, tagging it with the registry's path.
+    3.  **Build the Image:** Build the Docker image, tagging it with the registry's path.
         ```bash
         docker build -t ${CONTAINER_REGISTRY_URL}/shoptrack-backend:${IMAGE_TAG} .
         ```
-    3.  **Push the Image:** Push the built image to the registry.
+    4.  **Push the Image:** Push the built image to the registry.
         ```bash
-        docker push ${CONTAINER_REGISTRY}/shoptrack-backend:${IMAGE_TAG}
+        docker push ${CONTAINER_REGISTRY_URL}/shoptrack-backend:${IMAGE_TAG}
         ```
 
 2.  **Run on Deployment Server**
