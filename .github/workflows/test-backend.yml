@@ -19,16 +19,10 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Rye
+        uses: eifinger/setup-rye@v4
         with:
-          python-version: '3.12'
-
-      - name: Install Rye
-        run: |
-          curl -sSf https://rye.astral.sh/get | bash -s -- --yes
-          echo "$HOME/.rye/shims" >> $GITHUB_PATH
-        shell: bash
+          enable-cache: true
 
       - name: Install dependencies
         run: rye sync
