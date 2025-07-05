@@ -124,11 +124,11 @@ This section describes the manual deployment procedure for **emergency situation
         ```
     3.  **Build the Image:** Build the Docker image, tagging it with the registry's path.
         ```bash
-        docker build -t ${CONTAINER_REGISTRY_URL}/shoptrack-backend:${IMAGE_TAG} .
+        docker build -t ${CONTAINER_REGISTRY_URL}/shoptrack-frontend:${IMAGE_TAG} .
         ```
     4.  **Push the Image:** Push the built image to the registry.
         ```bash
-        docker push ${CONTAINER_REGISTRY_URL}/shoptrack-backend:${IMAGE_TAG}
+        docker push ${CONTAINER_REGISTRY_URL}/shoptrack-frontend:${IMAGE_TAG}
         ```
 2.  **Run on Deployment Server**
     1.  **Prerequisite:** Before running the application, ensure the deployment server is authenticated with the container registry.  
@@ -138,7 +138,7 @@ This section describes the manual deployment procedure for **emergency situation
         docker login <CONTAINER_REGISTRY_URL>
         ```
     2.  **Prepare Environment:** First, ensure your `.env` file is configured for production.
-    2.  **Run:** Navigate to the `frontend` project directory (where `compose.traefik.yml` is located) and run the following command.  
+    3.  **Run:** Navigate to the `frontend` project directory (where `compose.traefik.yml` is located) and run the following command.  
         This will pull the image from the registry and start the application.
         ```bash
         docker compose -f compose.traefik.yml up -d
