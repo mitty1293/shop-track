@@ -1,0 +1,80 @@
+name: Deploy Frontend
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch: # GitHubのActionsタブから手動で実行も可能にする
+
+jobs:
+  build_and_push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Log in to the Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.CONTAINER_REGISTRY_URL }}
+          username: ${{ secrets.CONTAINER_REGISTRY_USERNAME }}
+          password: ${{ secrets.CONTAINER_REGISTRY_PASSWORD }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ vars.CONTAINER_REGISTRY_URL }}/shoptrack-frontend
+          tags: |
+            type=semver,pattern={{version}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}
+
+  deploy:
+    name: Deploy to Server
+    needs: build_and_push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create .env file for Docker Compose
+        id: create_env
+        run: |
+          echo "Writing .env file content..."
+          cat << EOF > .env
+          CONTAINER_REGISTRY_URL=${{ vars.CONTAINER_REGISTRY_URL }}
+          IMAGE_TAG=${{ github.ref_name }}
+          EOF
+
+      - name: Copy .env file to server
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_SERVER_HOST }}
+          username: ${{ secrets.DEPLOY_SERVER_USERNAME }}
+          key: ${{ secrets.DEPLOY_SERVER_PRIVATE_KEY }}
+          source: ".env"
+          target: "~/shop-track/frontend/"
+
+      - name: Run deployment commands
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_SERVER_HOST }}
+          username: ${{ secrets.DEPLOY_SERVER_USERNAME }}
+          key: ${{ secrets.DEPLOY_SERVER_PRIVATE_KEY }}
+          script: |
+            cd ~/shop-track
+            echo ">>> Pulling latest code..."
+            git pull
+            git fetch --tags
+            echo ">>> Restarting frontend services with new image..."
+            docker compose -f frontend/compose.traefik.yml --env-file frontend/.env pull
+            docker compose -f frontend/compose.traefik.yml --env-file frontend/.env up -d --force-recreate --remove-orphans
+            echo ">>> Deployment finished successfully!"
