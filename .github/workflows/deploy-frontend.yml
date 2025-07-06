@@ -53,6 +53,7 @@ jobs:
           cat << EOF > .env
           CONTAINER_REGISTRY_URL=${{ vars.CONTAINER_REGISTRY_URL }}
           IMAGE_TAG=${{ github.event_name == 'workflow_dispatch' && 'latest' || github.ref_name }}
+          HOST_DOMAIN=${{ vars.HOST_DOMAIN }}
           EOF
 
       - name: Copy .env file to server
