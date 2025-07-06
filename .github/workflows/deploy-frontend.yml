@@ -4,7 +4,7 @@ on:
   push:
     tags:
       - 'v*.*.*'
-  workflow_dispatch: # GitHubのActionsタブから手動で実行も可能にする
+  workflow_dispatch:
 
 jobs:
   build_and_push:
@@ -28,6 +28,7 @@ jobs:
           images: ${{ vars.CONTAINER_REGISTRY_URL }}/shoptrack-frontend
           tags: |
             type=semver,pattern={{version}}
+            type=raw,value=latest,enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -51,7 +52,7 @@ jobs:
           echo "Writing .env file content..."
           cat << EOF > .env
           CONTAINER_REGISTRY_URL=${{ vars.CONTAINER_REGISTRY_URL }}
-          IMAGE_TAG=${{ github.ref_name }}
+          IMAGE_TAG=${{ github.event_name == 'workflow_dispatch' && 'latest' || github.ref_name }}
           EOF
 
       - name: Copy .env file to server
