@@ -28,6 +28,7 @@ jobs:
           images: ${{ vars.CONTAINER_REGISTRY_URL }}/shoptrack-backend
           tags: |
             type=semver,pattern={{version}}
+            type=raw,value=latest,enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
@@ -58,7 +59,7 @@ jobs:
           DJANGO_CORS_ALLOWED_ORIGINS=${{ vars.DJANGO_CORS_ALLOWED_ORIGINS }}
           DATABASE_URL=${{ secrets.DATABASE_URL }}
           CONTAINER_REGISTRY_URL=${{ vars.CONTAINER_REGISTRY_URL }}
-          IMAGE_TAG=${{ github.ref_name }}
+          IMAGE_TAG=${{ github.event_name == 'workflow_dispatch' && 'latest' || github.ref_name }}
           EOF
 
       - name: Copy .env file to server
