@@ -51,6 +51,7 @@ jobs:
         run: |
           echo "Writing .env file content..."
           cat << EOF > .env
+          VITE_API_BASE_URL=${{ vars.VITE_API_BASE_URL }}
           CONTAINER_REGISTRY_URL=${{ vars.CONTAINER_REGISTRY_URL }}
           IMAGE_TAG=${{ github.event_name == 'workflow_dispatch' && 'latest' || github.ref_name }}
           HOST_DOMAIN=${{ vars.HOST_DOMAIN }}
